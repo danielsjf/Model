@@ -1,0 +1,16 @@
+[PROJECT]
+
+[RP:CHP]
+1=
+
+[MRUFILES]
+1=C:\Users\Jef Daniels\Dropbox\Thesis 2013\Model\Real\CHP.lst
+
+[OPENWINDOW_1]
+FILE0=C:\Users\Jef Daniels\Dropbox\Thesis 2013\Model\Real\CHP.gms
+FILE1=C:\Users\Jef Daniels\Dropbox\Thesis 2013\Model\Real\CHP.gms
+MAXIM=1
+TOP=75
+LEFT=75
+HEIGHT=425
+WIDTH=1162

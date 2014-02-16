@@ -1,0 +1,47 @@
+B 2 C o m p i l a t i o n
+B 229 Include File Summary
+B 243 Equation Listing    SOLVE qp1 Using MIP From line 146
+D 244 Investment
+D 6608 Heat_demand
+D 6629 Grid
+D 6658 Storage
+D 6671 Boiler
+D 6684 CHP_E
+D 6697 CHP_Q
+D 6710 Shutdown1
+D 6723 Shutdown2
+B 6738 Column Listing      SOLVE qp1 Using MIP From line 146
+E 6739 obj
+E 6747 m_fCHP
+E 6775 m_fB
+E 6799 Q_CHP
+E 6827 Q_B
+E 6855 Q_S
+E 6879 DeltaQ_S
+E 6903 E_CHP
+E 6935 E_i
+E 6957 E_b
+E 7156 ON
+B 7182 Model Statistics    SOLVE qp1 Using MIP From line 146
+B 7198 Solution Report     SOLVE qp1 Using MIP From line 146
+F 7235 Investment
+F 7241 Heat_demand
+F 9166 Grid
+F 9363 Storage
+F 11288 Boiler
+F 13213 CHP_E
+F 15138 CHP_Q
+F 17063 Shutdown1
+F 18988 Shutdown2
+G 20908 obj
+G 20914 m_fCHP
+G 22839 m_fB
+G 24764 Q_CHP
+G 26689 Q_B
+G 28614 Q_S
+G 30539 DeltaQ_S
+G 32464 E_CHP
+G 34389 E_i
+G 34778 E_b
+G 34784 ON
+B 36716 E x e c u t i o n
