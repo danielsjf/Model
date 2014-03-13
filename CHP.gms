@@ -55,45 +55,53 @@ $gdxin
 variables
      obj               objective
 
-     m_fCHP(i,n)       primary fuelflow CHP
-     m_fB(i,n)         primary fuelflow boiler
+     m_fCHP(i,n,s)     primary fuelflow CHP
+     m_fB(i,n,s)       primary fuelflow boiler
 
-     Q_CHP(i,n)        heat supply CHP
-     Q_B(i,n)          heat supply boiler
-     Q_S(i,n)          heat storage
-     DeltaQ_S(i,n)     heat supply storage
+     Q_CHP(i,n,s)      heat supply CHP
+     Q_B(i,n,s)        heat supply boiler
+     Q_S(i,n,s)        heat storage
+     DeltaQ_S(i,n,s)   heat supply storage
 
-     E_CHP(i,n)        electricity supply CHP
+     R_b               Revenue bidding
+     R_ir              Revenue imbalance reduction
+
+     C_ef              Cost extra fuel
+
+     FC_b              Fuelcost boiler
+     FC_bc             Fuelcost boiler and chp
+
+     E_CHP(i,n,s)      electricity supply CHP
      E_i(i,s)          imbalance reduction
      E_b               electricity demand bidding
 
-     ON(i,n)           Turn CHP on
+     ON(i,n,s)         Turn CHP on
      BUY(n)            Invest in CHP;
 
      E_i.lo(i,s) = min(0,-E_i0(i,s));
      E_i.up(i,s) = max(-E_i0(i,s),0);
 
-     DeltaQ_S.lo(i,n) = -Qcap_up(n);
-     DeltaQ_S.up(i,n) = Qcap_up(n);
+     DeltaQ_S.lo(i,n,s) = -Qcap_up(n);
+     DeltaQ_S.up(i,n,s) = Qcap_up(n);
 
 
-positive variables m_fCHP(i,n),m_fB(i,n),E_CHP(i,n),Q_CHP(i,n),Q_B(i,n),Q_S(i,n),E_b;
-     m_fCHP.up(i,n) = Ecap_up(n)/Ae(n);
-     m_fB.up(i,n) = Qcap_up(n)/Nb(n);
+positive variables m_fCHP(i,n,s),m_fB(i,n,s),E_CHP(i,n,s),Q_CHP(i,n,s),Q_B(i,n,s),Q_S(i,n,s),E_b;
+     m_fCHP.up(i,n,s) = Ecap_up(n)/Ae(n);
+     m_fB.up(i,n,s) = Qcap_up(n)/Nb(n);
 
-     E_CHP.up(i,n) = Ecap_up(n);
+     E_CHP.up(i,n,s) = Ecap_up(n);
 
-     Q_CHP.up(i,n) = Ecap_up(n)/Ae(n)*Aq(n);
-     Q_B.up(i,n)= Qcap_up(n);
+     Q_CHP.up(i,n,s) = Ecap_up(n)/Ae(n)*Aq(n);
+     Q_B.up(i,n,s)= Qcap_up(n);
 
      E_b.up = sum(n, Ecap_up(n));
-     Q_S.fx('192',n)= 0;
-     Q_S.up(i,n)= Cs(n);
+     Q_S.fx('192',n,s)= 0;
+     Q_S.up(i,n,s)= Cs(n);
 
 
-binary variable ON(i,n),BUY(n);
+binary variable ON(i,n,s),BUY(n);
      BUY.l(n) = BUYst(n);
-     ON.fx(i,n)$(BUYst(n) < 0.5) = 0;
+     ON.fx(i,n,s)$(BUYst(n) < 0.5) = 0;
 
 
 *semicont variable E_CHP(i,n),Q_CHP(i,n);
@@ -107,26 +115,36 @@ binary variable ON(i,n),BUY(n);
 
 
 
-equation Investment,Heat_demand(i,n),Grid(i),Storage(i,n),Boiler(i,n),CHP_E(i,n),CHP_Q(i,n),Shutdown1(i,n),Shutdown2(i,n);
+equation Investment,Revenue_bidding,Revenue_imbalance_red,Cost_extra_fuel,Fuelcost_only_boiler,Fuelcost_boiler_chp,Heat_demand(i,n,s),Grid(i,s),Storage(i,n,s),CHP_E(i,n,s),CHP_Q(i,n,s),Boiler(i,n,s),Shutdown1(i,n,s),Shutdown2(i,n,s);
 *, start_shut1,min_up1,Dispatch(i);
 
-Investment..                   obj =e= sum((i,n), (Q_B(i,n)+Q_CHP(i,n))/Nb(n)*P_n(i)) + sum(i, E_b*P_g(i)) + sum((i,s), -Pi_s(s)*E_i1(i,s)*E_i(i,s)*P_i(i,s)) - sum((i,n), (m_fCHP(i,n)+m_fB(i,n))*P_n(i));
+   Investment..                obj =e= R_b + R_ir - C_ef;
 
-   Heat_demand(i,n)..          Q_H(i,n) =e= DeltaQ_S(i,n) + Q_B(i,n) + Q_CHP(i,n);
+   Revenue_bidding..           R_b =e= sum(i, E_b*P_g(i));
 
-   Grid(i)..                   sum(n, E_CHP(i,n)) =e= sum(s, Pi_s(s)*E_i(i,s)) + E_b;
+   Revenue_imbalance_red..     R_ir =e= sum((i,s), -Pi_s(s)*E_i1(i,s)*E_i(i,s)*P_i(i,s));
 
-   Storage(i,n)..              Q_S(i,n) =e= Q_S(i--1,n)*Ns(n) - DeltaQ_S(i,n);
+   Cost_extra_fuel..           C_ef =e= FC_bc - FC_b;
 
-   CHP_E(i,n)..                E_CHP(i,n) =e= m_fCHP(i,n)*Ae(n);
+   Fuelcost_only_boiler..      FC_b =e= sum((i,n,s), Pi_s(s)*(Q_H(i,n)/Nb(n))*P_n(i));
 
-   CHP_Q(i,n)..                Q_CHP(i,n) =e= m_fCHP(i,n)*Aq(n);
+   Fuelcost_boiler_chp..       FC_bc =e= sum((i,n,s), Pi_s(s)*(m_fCHP(i,n,s)+m_fB(i,n,s))*P_n(i));
 
-   Boiler(i,n)..               Q_B(i,n) =e= m_fB(i,n)*Nb(n);
+   Heat_demand(i,n,s)..        Q_H(i,n) =e= DeltaQ_S(i,n,s) + Q_B(i,n,s) + Q_CHP(i,n,s);
 
-   Shutdown1(i,n)..            E_CHP(i,n) =g= Ecap_lo(n)*ON(i,n);
+   Grid(i,s)..                 sum(n, E_CHP(i,n,s)) =e= E_i(i,s) + E_b;
 
-   Shutdown2(i,n)..            E_CHP(i,n) =l= Ecap_up(n)*ON(i,n);
+   Storage(i,n,s)..            Q_S(i,n,s) =e= Q_S(i--1,n,s)*Ns(n) - DeltaQ_S(i,n,s);
+
+   CHP_E(i,n,s)..              E_CHP(i,n,s) =e= m_fCHP(i,n,s)*Ae(n);
+
+   CHP_Q(i,n,s)..              Q_CHP(i,n,s) =e= m_fCHP(i,n,s)*Aq(n);
+
+   Boiler(i,n,s)..             Q_B(i,n,s) =e= m_fB(i,n,s)*Nb(n);
+
+   Shutdown1(i,n,s)..          E_CHP(i,n,s) =g= Ecap_lo(n)*ON(i,n,s);
+
+   Shutdown2(i,n,s)..          E_CHP(i,n,s) =l= Ecap_up(n)*ON(i,n,s);
 
 *MINIMUM UP TIME
 
@@ -146,25 +164,25 @@ option MIP=cplex;
 solve qp1 using mip maximizing obj;
 
 
-m_fCHP.l(i,n)$(not m_fCHP.l(i,n)) = eps;
+m_fCHP.l(i,n,s)$(not m_fCHP.l(i,n,s)) = eps;
 
-m_fB.l(i,n)$(not m_fB.l(i,n)) = eps;
+m_fB.l(i,n,s)$(not m_fB.l(i,n,s)) = eps;
 
-Q_CHP.l(i,n)$(not Q_CHP.l(i,n)) = eps;
+Q_CHP.l(i,n,s)$(not Q_CHP.l(i,n,s)) = eps;
 
-Q_B.l(i,n)$(not Q_B.l(i,n)) = eps;
+Q_B.l(i,n,s)$(not Q_B.l(i,n,s)) = eps;
 
-Q_S.l(i,n)$(not Q_S.l(i,n)) = eps;
+Q_S.l(i,n,s)$(not Q_S.l(i,n,s)) = eps;
 
-DeltaQ_S.l(i,n)$(not DeltaQ_S.l(i,n)) = eps;
+DeltaQ_S.l(i,n,s)$(not DeltaQ_S.l(i,n,s)) = eps;
 
-E_CHP.l(i,n)$(not E_CHP.l(i,n)) = eps;
+E_CHP.l(i,n,s)$(not E_CHP.l(i,n,s)) = eps;
 
 E_i.l(i,s)$(not E_i.l(i,s)) = eps;
 
 E_b.l$(not E_b.l) = eps;
 
-ON.l(i,n)$(not ON.l(i,n)) = eps;
+ON.l(i,n,s)$(not ON.l(i,n,s)) = eps;
 
 BUY.l(n)$(not BUY.l(n)) = eps;
 

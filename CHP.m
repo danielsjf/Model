@@ -5,7 +5,8 @@ path(path,'C:\GAMS\win64\24.2')
 clear gamso;
  load Spot2013
  load Imbalance2013
- load profiles
+ load Profiles2012
+ load Scenarios
 
  
 %{
@@ -55,21 +56,17 @@ qstout= Output of the heat storage
 %Input constants
 %---------------
 
-Cu = 10; % Maximum amount of CHP's
-Cust = 9; % Initial amount of CHP's
-
 Cs0 = 200; % [kWh] Storage tank capacity
-
-S = 2; % Number of stochastic scenario's
 
 Ae0 = 0.4; % CHP electrical efficiency
 Aq0 = 0.45; % CHP thermal efficiency
 Nb0 = 0.98; % Boiler thermal efficiency
 Ns0 = 0.998; % Storage heat efficiency
 
-%Input time
-%----------
+%Input time (i)
+%--------------
 
+%General
 week = 3; % week of the year
 
 quarters = 4; % quarters per hour
@@ -85,15 +82,29 @@ sample_q = sample_h * quarters; % [quarters] sample duration
 period_h = week * days_w * hours; % [hours] period of the year
 period_q = period_h * quarters; % [quarters] period of the year
 
-%Input time postprocessing
-%-------------------------
-
+%Postprocessing
 time_i = (1:sample_q)'; % time index vector sample
 time_q = time_i/quarters; % [quarters] time vector sample
 
 sample_i = [1:sample_q] + period_q; % sample period index
 
 total_q=period_q+(sample_q-1); % [quarters] period before and during sample period
+
+%Input CHP's (n)
+%---------------
+
+Cu = 2; % Maximum amount of CHP's
+Cust = 2; % Initial amount of CHP's
+
+%Input scenarios (s)
+%-------------------
+
+S = size(Error,2);
+% Imbalance
+imbal_y = repmat(Error*1000,days_y,1);
+imbal_s = imbal_y(sample_i,:);
+
+Pi_st = Prob';
 
 %Input price
 %-----------
@@ -133,16 +144,20 @@ heatD3_s = heatD3_y(sample_i); % [kWh] heat demand house 3 during the sample dur
 heatD_y = repmat(heatD1_y,1,Cu);
 heatD_s = repmat(heatD1_s,1,Cu);
 
+[amount value] = hist(mhouse1h,200);
+chart = cumsum(flipud(amount'));
+plot(chart',flipud(value'))
+
+test = chart'.*flipud(value);
+test_max = max(test);
+i = find(test==test_max);
+
 %Input energy demand
 %-------------------
 
 % House electricity demand
 energy_y = reshape(repmat(mhouse1e+mhouse2e+mhouse3e,quarters,1),days_y*hours*quarters,1);
 energy_s = energy_y(sample_i);
-
-% Imbalance
-imbal_y = repmat(energy_y,1,S)-mean(energy_y);
-imbal_s = imbal_y(sample_i,:);
 
 % Capacity restrictions
 Ecap_loVar = 0.2/quarters*ones(Cu,1);
@@ -250,7 +265,7 @@ Aq.type = 'parameter';
 Aq.dim =1;
 
 Pi_s.name='Pi_s'; %probability scenario
-Pi_s.val=1/S*ones(S,1);
+Pi_s.val=Pi_st;
 Pi_s.form = 'full';
 Pi_s.type = 'parameter';
 Pi_s.dim =1;
@@ -378,54 +393,68 @@ obj=r.val(:,1);
 
 rs.name = 'm_fCHP';
 r = rgdx ('results', rs);
-m_fCHP = zeros(sample_q,Cu);
+m_fCHP = zeros(sample_q,Cu,S);
 for j=1:Cu
-    m_fCHP(time_i,j)=r.val((time_i-1)*Cu+j,3);
+    for k=1:S
+        m_fCHP(time_i,j,k)=r.val((time_i-1)*Cu*S+(j-1)*S+k,4);
+    end
 end
 
 rs.name = 'm_fB';
 r = rgdx ('results', rs);
-m_fB = zeros(sample_q,Cu);
+m_fB = zeros(sample_q,Cu,S);
 for j=1:Cu
-    m_fB(time_i,j)=r.val((time_i-1)*Cu+j,3);
+    for k=1:S
+        m_fB(time_i,j,k)=r.val((time_i-1)*Cu*S+(j-1)*S+k,4);
+    end
 end
 
 
 rs.name = 'Q_CHP'; 
 r = rgdx ('results', rs);
-Q_CHP = zeros(sample_q,Cu);
+Q_CHP = zeros(sample_q,Cu,S);
 for j=1:Cu
-    Q_CHP(time_i,j)=r.val((time_i-1)*Cu+j,3);
+    for k=1:S
+        Q_CHP(time_i,j,k)=r.val((time_i-1)*Cu*S+(j-1)*S+k,4);
+    end
 end
 
 
 rs.name = 'Q_B';
 r = rgdx ('results', rs);
-Q_B = zeros(sample_q,Cu);
+Q_B = zeros(sample_q,Cu,S);
 for j=1:Cu
-    Q_B(time_i,j)=r.val((time_i-1)*Cu+j,3);
+    for k=1:S
+        Q_B(time_i,j,k)=r.val((time_i-1)*Cu*S+(j-1)*S+k,4);
+    end
 end
  
 rs.name = 'DeltaQ_S'; %Storage
 r = rgdx ('results', rs); 
-DeltaQ_S = zeros(sample_q,Cu);
+DeltaQ_S = zeros(sample_q,Cu,S);
 for j=1:Cu
-    DeltaQ_S(time_i,j)=r.val((time_i-1)*Cu+j,3);
+    for k=1:S
+        DeltaQ_S(time_i,j,k)=r.val((time_i-1)*Cu*S+(j-1)*S+k,4);
+    end
 end
 
 rs.name = 'Q_S';
 r = rgdx ('results', rs);
-Q_S = zeros(sample_q,Cu);
+Q_S = zeros(sample_q,Cu,S);
 for j=1:Cu
-    Q_S(time_i,j)=r.val((time_i-1)*Cu+j,3);
+    for k=1:S
+        Q_S(time_i,j,k)=r.val((time_i-1)*Cu*S+(j-1)*S+k,4);
+    end
 end
 
 
 rs.name = 'E_CHP';
 r = rgdx ('results', rs);
-E_CHP = zeros(sample_q,Cu);
+E_CHP = zeros(sample_q,Cu,S);
 for j=1:Cu
-    E_CHP(time_i,j)=r.val((time_i-1)*Cu+j,3);
+    for k=1:S
+        E_CHP(time_i,j,k)=r.val((time_i-1)*Cu*S+(j-1)*S+k,4);
+    end
 end
 
 rs.name = 'E_i';
@@ -437,13 +466,15 @@ end
 
 rs.name = 'E_b';
 r = rgdx ('results', rs);
-E_b=r.val*ones(size(sample_i'));
+E_b=r.val*ones(size(sample_i')); % Array to make it easier for plotting
 
 rs.name = 'ON';
 r = rgdx ('results', rs);
-ON = zeros(sample_q,Cu);
+ON = zeros(sample_q,Cu,S);
 for j=1:Cu
-    ON(time_i,j)=r.val((time_i-1)*Cu+j,3);
+    for k=1:S
+        ON(time_i,j,k)=r.val((time_i-1)*Cu*S+(j-1)*S+k,4);
+    end
 end
 
 rs.name = 'BUY';
@@ -455,7 +486,11 @@ BUY=r.val(:,2);
 %Postproces data
 %-----------------------------------
 
-C_f = sum(m_fCHP,2).*P_n.val;
+C_f = zeros(size(m_fCHP));
+for j=1:S
+    C_f(:,:,j) = m_fCHP(:,:,j).*Pi_st(j);
+end
+C_f = sum(sum(C_f,2),3).*P_n.val;
 
 R_b = E_b.*P_g.val;
 R_i = abs(E_i*Pi_s.val).*P_i.val;
@@ -469,63 +504,66 @@ profit_t = sum(profit,1) % [€] total profit
 %Making figures
 %-----------------------------------
 
+Cu_sh = 1; % shown chp
+S_sh = 3; % shown scenario
+
 figure(1)
-plot(time_q,[E_i0.val(:,1), E_b, E_i*Pi_s.val])
-title('Imbalance');
+plot(time_q,[E_i0.val(:,S_sh), E_b, E_i*Pi_s.val])
+title(['Imbalance for scenario ',num2str(S_sh)]);
 legend('Wind imbalance','Bidding','Imbalance reduction');
 
 figure(2)
 subplot(2,1,1)
-plot(time_q,Q_S)
-title('Storage');
+plot(time_q,Q_S(:,:,S_sh))
+title(['Storage for scenario ',num2str(S_sh)]);
 subplot(2,1,2)
-plot(time_q,DeltaQ_S)
-title('Storage heat supply');
+plot(time_q,DeltaQ_S(:,:,S_sh))
+title(['Storage heat supply for scenario ',num2str(S_sh)]);
 
 figure(3)
-plot(time_q,[Q_S(:,1),DeltaQ_S(:,1)]);
+plot(time_q,[Q_S(:,Cu_sh,S_sh),DeltaQ_S(:,Cu_sh,S_sh)]);
 legend('Storage','Storage heat supply');
-title('Storage unit 1');
+title(['Storage unit ',num2str(Cu_sh),' for scenario ',num2str(S_sh)]);
 xlabel('Time [h]');
 ylabel('Heat [kWh]');
 
 figure(4)
 subplot(2,1,1)
-plot(time_q,E_CHP)
-title('CHP energy supply');
+plot(time_q,E_CHP(:,:,S_sh))
+title(['CHP energy supply for scenario ',num2str(S_sh)]);
 xlabel('Time [h]');
 ylabel('Energy [kWh]');
 subplot(2,1,2)
-plot(time_q,Q_CHP)
-title('CHP heat supply');
+plot(time_q,Q_CHP(:,:,S_sh))
+title(['CHP heat supply for scenario ',num2str(S_sh)]);
 xlabel('Time [h]');
 ylabel('Heat [kWh]');
 
 figure(5)
-plot(time_q,[Q_H.val(:,1),Q_B(:,1),Q_CHP(:,1)])
+plot(time_q,[Q_H.val(:,Cu_sh),Q_B(:,Cu_sh,S_sh),Q_CHP(:,Cu_sh,S_sh)])
 legend('House heat demand','Boiler heat supply','CHP heat supply');
-title('Heating unit 1');
+title(['Heating unit ',num2str(Cu_sh),' for scenario ',num2str(S_sh)]);
 xlabel('Time [h]');
 ylabel('Heat [kWh]');
 
 figure(6)
-plot(time_q,[sum(m_fB,2),sum(m_fCHP,2)])
+plot(time_q,[sum(m_fB(:,:,S_sh),2),sum(m_fCHP(:,:,S_sh),2)])
 legend('Total fuelflow Boilers','Total fuelflow CHPs');
-title('Total fuelflow');
+title(['Total fuelflow for scenario ',num2str(S_sh)]);
 xlabel('Time [h]');
 ylabel('Fuelflow [kWh]');
 
 figure(7)
-plot(time_q,[E_i0.val(:,1),E_CHP(:,1),E_b(:,1),E_i(:,1)])
+plot(time_q,[E_i0.val(:,S_sh),E_CHP(:,Cu_sh,S_sh),E_b(:),E_i(:,S_sh)])
 legend('Imbalance','CHP energy supply unit 1','Bidding','Total imbalance reduction');
-title('Energy unit 1');
+title(['Energy unit ',num2str(Cu_sh),' for scenario ',num2str(S_sh)]);
 xlabel('Time [h]');
 ylabel('Energy [kWh]');
 
 figure(8)
-plot(time_q,[E_i0.val(:,1),sum(E_CHP,2),E_b(:,1),E_i*Pi_s.val])
+plot(time_q,[E_i0.val(:,S_sh),sum(E_CHP(:,:,S_sh),2),E_b(:),E_i*Pi_s.val])
 legend('Imbalance','CHP energy supply','Bidding','Imbalance reduction');
-title('Energy');
+title(['Energy for scenario ',num2str(S_sh)]);
 xlabel('Time [h]');
 ylabel('Energy [kWh]');
 
