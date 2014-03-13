@@ -3,8 +3,8 @@ close all
 clc
 path(path,'C:\GAMS\win64\24.2')
 clear gamso;
- load spot2010
- %load ElectPV_multhouse
+ load Spot2013
+ load Imbalance2013
  load profiles
 
  
@@ -98,6 +98,8 @@ total_q=period_q+(sample_q-1); % [quarters] period before and during sample peri
 %Input price
 %-----------
 
+% All input prices are for November 2013 unless stated otherwise
+
 % Gas
 gasPrice = 0.040/2; % [€/kWh] gas price (http://epp.eurostat.ec.europa.eu/statistics_explained/index.php/Electricity_and_natural_gas_price_statistics;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_204&lang=en;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_205&lang=en;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_202&lang=en;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_203&lang=en)
 price_gas_y = gasPrice*ones(days_y*hours*quarters,1); % [€/kWh] gas price during the year
@@ -109,7 +111,7 @@ price_elecC_y = repmat(price_elecC_d, days_y, 1); % [€/kWh] consumption electric
 price_elecC_s = price_elecC_y(sample_i); % [€/kWh] consumption electricity price during the sample duration
 
 % Grid (spotprice)
-price_elecS_y = reshape(repmat(spot2010/1000,quarters,1),days_y*hours*quarters,1); % [€/kWh] spot electricity price during the year
+price_elecS_y = reshape(repmat(spot/1000,quarters,1),days_y*hours*quarters,1); % [€/kWh] spot electricity price during the year
 price_elecS_s = price_elecS_y(sample_i); % [€/kWh] spot electricity price during the sample duration
 
 % Imbalance
@@ -305,37 +307,40 @@ index_m=0;
 o2 = 0;
 down = 1;
 
-while true
-    BUYst.val=[ones(1,Cust) zeros(1,Cu-Cust)];
-    wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,dt,BUYst);
-    path(path,'C:\GAMS\win64\24.2')
-    gams('CHP');%LOCAL PRICE IS TAKEN INTO ACCOUNT 
-    
-    rs.name = 'obj';
-    r = rgdx ('results', rs);
-    obj=r.val(:,1);
-    o1 = obj/Cust;
-    [obj Cust o1]
-    
-    if o1 >= o2
-        o2 = o1;
-        if down == 1
-            Cust = Cust - 1;
-            if Cust == 0; break; end;
-        else
-            Cust = Cust + 1;
-            if Cust > Cu; break; end;
-        end
-    else
-        if down == 1
-            Cust = Cust + 2;
-            if Cust > Cu; break; end;
-            down = 0;
-        else
-            break;
-        end
-    end
-end
+% while true
+%     BUYst.val=[ones(1,Cust) zeros(1,Cu-Cust)];
+%     wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,dt,BUYst);
+%     path(path,'C:\GAMS\win64\24.2')
+%     gams('CHP');%LOCAL PRICE IS TAKEN INTO ACCOUNT 
+%     
+%     rs.name = 'obj';
+%     r = rgdx ('results', rs);
+%     obj=r.val(:,1);
+%     o1 = obj/Cust;
+%     [obj Cust o1]
+%     
+%     o1
+%     break;
+%     
+%     if o1 >= o2
+%         o2 = o1;
+%         if down == 1
+%             Cust = Cust - 1;
+%             if Cust == 0; break; end;
+%         else
+%             Cust = Cust + 1;
+%             if Cust > Cu; break; end;
+%         end
+%     else
+%         if down == 1
+%             Cust = Cust + 2;
+%             if Cust > Cu; break; end;
+%             down = 0;
+%         else
+%             break;
+%         end
+%     end
+% end
 
 Custopt = Cust;
 
