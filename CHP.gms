@@ -17,7 +17,7 @@ set
 parameters
      P_g(i)       price electricity grid (spotprice)
      P_c(i)       price electricity consumption
-     P_i(i,s)     price electricity imbalance
+     P_i(i)       price electricity imbalance
      P_n(i)       price natural gas
      P_st(n)      price startup
 
@@ -47,7 +47,7 @@ Scalar
 
 
 $gdxin inputs
-$load i n s P_g P_c P_i P_n P_st E_i0 E_i1 Q_H Nb Ns Ae Aq Pi_s Ecap_lo Ecap_up Qcap_up Cs dt BUYst
+$load i n s P_g P_c P_i P_n P_st E_i0 E_i1 Q_H Nb Ns Ae Aq Pi_s Ecap_lo Ecap_up Qcap_up Cs dt
 $gdxin
 
 *$if exist matdata.gms  $include matdata.gms
@@ -100,8 +100,6 @@ positive variables m_fCHP(i,n,s),m_fB(i,n,s),E_CHP(i,n,s),Q_CHP(i,n,s),Q_B(i,n,s
 
 
 binary variable ON(i,n,s),BUY(n);
-     BUY.l(n) = BUYst(n);
-     ON.fx(i,n,s)$(BUYst(n) < 0.5) = 0;
 
 
 *semicont variable E_CHP(i,n),Q_CHP(i,n);
@@ -118,17 +116,18 @@ binary variable ON(i,n,s),BUY(n);
 equation Investment,Revenue_bidding,Revenue_imbalance_red,Cost_extra_fuel,Fuelcost_only_boiler,Fuelcost_boiler_chp,Heat_demand(i,n,s),Grid(i,s),Storage(i,n,s),CHP_E(i,n,s),CHP_Q(i,n,s),Boiler(i,n,s),Shutdown1(i,n,s),Shutdown2(i,n,s);
 *, start_shut1,min_up1,Dispatch(i);
 
-   Investment..                obj =e= R_b + R_ir - C_ef;
+   Investment..                obj =e= sum(i, R_b(i) + R_ir(i) - C_ef(i));
 
-   Revenue_bidding..           R_b =e= sum(i, E_b*P_g(i));
+   Revenue_bidding(i)..        R_b(i) =e= E_b*P_g(i);
 
-   Revenue_imbalance_red..     R_ir =e= sum((i,s), -Pi_s(s)*E_i1(i,s)*E_i(i,s)*P_i(i,s));
+   Revenue_imbalance_red(i)..  R_ir(i) =e= sum(s, -Pi_s(s)*E_i1(i,s)*E_i(i,s)*P_i(i));
 
-   Cost_extra_fuel..           C_ef =e= FC_bc - FC_b;
+   Cost_extra_fuel(i)..        C_ef(i) =e= FC_bc(i);
+*- FC_b;
 
-   Fuelcost_only_boiler..      FC_b =e= sum((i,n,s), Pi_s(s)*(Q_H(i,n)/Nb(n))*P_n(i));
+   Fuelcost_only_boiler(i)..   FC_b(i) =e= sum((n,s), Pi_s(s)*(Q_H(i,n)/Nb(n))*P_n(i));
 
-   Fuelcost_boiler_chp..       FC_bc =e= sum((i,n,s), Pi_s(s)*(m_fCHP(i,n,s)+m_fB(i,n,s))*P_n(i));
+   Fuelcost_boiler_chp(i)..    FC_bc(i) =e= sum((n,s), Pi_s(s)*(m_fCHP(i,n,s)+m_fB(i,n,s))*P_n(i));
 
    Heat_demand(i,n,s)..        Q_H(i,n) =e= DeltaQ_S(i,n,s) + Q_B(i,n,s) + Q_CHP(i,n,s);
 
@@ -182,9 +181,11 @@ E_i.l(i,s)$(not E_i.l(i,s)) = eps;
 
 E_b.l$(not E_b.l) = eps;
 
+R_ir.l(i)$(not R_ir.l(i)) = eps;
+
 ON.l(i,n,s)$(not ON.l(i,n,s)) = eps;
 
-BUY.l(n)$(not BUY.l(n)) = eps;
+*BUY.l(n)$(not BUY.l(n)) = eps;
 
 $ontext
 CHP_electrical1.l(i)$(not CHP_electrical1.l(i)) = eps;
@@ -210,4 +211,4 @@ $offtext
 *execute_unload %matout%;
 
 
-execute_unload 'results',  obj, m_fCHP, m_fB, Q_CHP, Q_B, Q_S, DeltaQ_S, E_CHP, E_i, E_b, ON, BUY;
+execute_unload 'results',  obj, R_b, R_ir, FC_bc, m_fCHP, m_fB, Q_CHP, Q_B, Q_S, DeltaQ_S, E_CHP, E_i, E_b, ON, BUY;
