@@ -1,67 +1,67 @@
 B 2 C o m p i l a t i o n
-B 249 Include File Summary
-B 263 Equation Listing    SOLVE qp1 Using MIP From line 163
-D 264 Investment
-D 455 Revenue_bidding
-D 468 Revenue_imbalance_red
-D 521 Cost_extra_fuel
-D 534 Fuelcost_only_boiler
-D 555 Fuelcost_boiler_chp
-D 1048 Heat_demand
-D 1069 Grid
-D 1090 Storage
-D 1111 CHP_E
-D 1124 CHP_Q
-D 1137 Boiler
-D 1150 Shutdown1
-D 1163 Shutdown2
-B 1178 Column Listing      SOLVE qp1 Using MIP From line 163
-E 1179 obj
-E 1187 m_fCHP
-E 1215 m_fB
-E 1239 Q_CHP
-E 1263 Q_B
-E 1287 Q_S
-E 1311 DeltaQ_S
-E 1335 R_b
-E 1359 R_ir
-E 1383 C_ef
-E 1407 FC_b
-E 1427 FC_bc
-E 1451 E_CHP
-E 1483 E_i
-E 1506 E_b
-E 3624 ON
-B 3650 Model Statistics    SOLVE qp1 Using MIP From line 163
-B 3666 Solution Report     SOLVE qp1 Using MIP From line 163
-F 3705 Investment
-F 3711 Revenue_bidding
-F 3908 Revenue_imbalance_red
-F 4105 Cost_extra_fuel
-F 4302 Fuelcost_only_boiler
-F 4499 Fuelcost_boiler_chp
-F 4696 Heat_demand
-F 16221 Grid
-F 18146 Storage
-F 29671 CHP_E
-F 41196 CHP_Q
-F 52721 Boiler
-F 64246 Shutdown1
-F 75771 Shutdown2
-G 87291 obj
-G 87297 m_fCHP
-G 98822 m_fB
-G 110347 Q_CHP
-G 121872 Q_B
-G 133397 Q_S
-G 144922 DeltaQ_S
-G 156447 R_b
-G 156644 R_ir
-G 156841 C_ef
-G 157038 FC_b
-G 157235 FC_bc
-G 157432 E_CHP
-G 168957 E_i
-G 170882 E_b
-G 170888 ON
-B 182420 E x e c u t i o n
+B 254 Include File Summary
+B 268 Equation Listing    SOLVE qp1 Using MIP From line 163
+D 269 Investment
+D 460 Revenue_bidding
+D 473 Revenue_imbalance_red
+D 518 Cost_extra_fuel
+D 531 Fuelcost_only_boiler
+D 552 Fuelcost_boiler_chp
+D 1045 Heat_demand
+D 1062 Grid
+D 1083 Storage
+D 1104 CHP_E
+D 1117 CHP_Q
+D 1130 Boiler
+D 1143 Shutdown1
+D 1164 Shutdown2
+B 1187 Column Listing      SOLVE qp1 Using MIP From line 163
+E 1188 obj
+E 1196 m_fCHP
+E 1224 m_fB
+E 1248 Q_CHP
+E 1272 Q_B
+E 1296 Q_S
+E 1320 DeltaQ_S
+E 1344 R_b
+E 1368 R_ir
+E 1392 C_ef
+E 1416 FC_b
+E 1436 FC_bc
+E 1460 E_CHP
+E 1492 E_i
+E 1515 E_b
+E 3633 ON
+B 3659 Model Statistics    SOLVE qp1 Using MIP From line 163
+B 3675 Solution Report     SOLVE qp1 Using MIP From line 163
+F 3714 Investment
+F 3720 Revenue_bidding
+F 3917 Revenue_imbalance_red
+F 4114 Cost_extra_fuel
+F 4311 Fuelcost_only_boiler
+F 4508 Fuelcost_boiler_chp
+F 4705 Heat_demand
+F 16230 Grid
+F 18155 Storage
+F 29680 CHP_E
+F 41205 CHP_Q
+F 52730 Boiler
+F 64255 Shutdown1
+F 75780 Shutdown2
+G 87300 obj
+G 87306 m_fCHP
+G 98831 m_fB
+G 110356 Q_CHP
+G 121881 Q_B
+G 133406 Q_S
+G 144931 DeltaQ_S
+G 156456 R_b
+G 156653 R_ir
+G 156850 C_ef
+G 157047 FC_b
+G 157244 FC_bc
+G 157441 E_CHP
+G 168966 E_i
+G 170891 E_b
+G 170897 ON
+B 182429 E x e c u t i o n

@@ -7,6 +7,15 @@ clear gamso;
  load Imbalance2013
  load Profiles2012
  load Scenarios
+ 
+%% General information
+% 
+% Regarding the units
+% * Prices in euros
+% * Power in MW
+% * Energy in MWh
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
  
 %{
@@ -96,7 +105,7 @@ total_q=period_q+(sample_q-1); % [quarters] period before and during sample peri
 
 S = size(Error,2);
 % Imbalance
-imbal_y = repmat(Error*100,days_y,1);
+imbal_y = repmat(Error,days_y,1); % Error is for wind turbine of 1 MW
 imbal_s = imbal_y(sample_i,:);
 
 Pi_st = Prob';
@@ -107,34 +116,60 @@ Pi_st = Prob';
 % All input prices are for November 2013 unless stated otherwise
 
 % Gas
-gasPrice = 0.040/2; % [€/kWh] gas price (http://epp.eurostat.ec.europa.eu/statistics_explained/index.php/Electricity_and_natural_gas_price_statistics;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_204&lang=en;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_205&lang=en;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_202&lang=en;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_203&lang=en)
-price_gas_y = gasPrice*ones(days_y*hours*quarters,1); % [€/kWh] gas price during the year
-price_gas_s = price_gas_y(sample_i); % [€/kWh] gas price during the sample duration
+gasPrice = 0.040/2*1000; % [€/MWh] gas price (http://epp.eurostat.ec.europa.eu/statistics_explained/index.php/Electricity_and_natural_gas_price_statistics;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_204&lang=en;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_205&lang=en;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_202&lang=en;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_203&lang=en)
+price_gas_y = gasPrice*ones(days_y*hours*quarters,1); % [€/MWh] gas price during the year
+price_gas_s = price_gas_y(sample_i); % [€/MWh] gas price during the sample duration
 
 % Consumption
-price_elecC_d = reshape(repmat([0.15 0.15 0.15 0.15 0.15 0.15 0.15 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.15 0.15],quarters,1),hours*quarters,1); % [€/kWh] electricity price (day/night, one day)
-price_elecC_y = repmat(price_elecC_d, days_y, 1); % [€/kWh] consumption electricity price during the year
-price_elecC_s = price_elecC_y(sample_i); % [€/kWh] consumption electricity price during the sample duration
+price_elecC_d = reshape(repmat([0.15 0.15 0.15 0.15 0.15 0.15 0.15 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.15 0.15],quarters,1),hours*quarters,1)*1000; % [€/MWh] electricity price (day/night, one day)
+price_elecC_y = repmat(price_elecC_d, days_y, 1); % [€/MWh] consumption electricity price during the year
+price_elecC_s = price_elecC_y(sample_i); % [€/MWh] consumption electricity price during the sample duration
 
 % Grid (spotprice)
-price_elecS_y = reshape(repmat(spot/1000,quarters,1),days_y*hours*quarters,1); % [€/kWh] spot electricity price during the year
-price_elecS_s = price_elecS_y(sample_i); % [€/kWh] spot electricity price during the sample duration
+price_elecS_y = reshape(repmat(spot,quarters,1),days_y*hours*quarters,1); % [€/MWh] spot electricity price during the year
+price_elecS_s = price_elecS_y(sample_i); % [€/MWh] spot electricity price during the sample duration
 
 % Imbalance
-price_imbal_y = repmat(price_elecS_y*2,1,S); % [€/kWh] imbalance electricity price during the year
-price_imbal_s = price_imbal_y(sample_i,S); % [€/kWh] imbalance electricity price during the sample duration
+price_imbal_y = zeros(size(imbal_y));
+tempPOS = repmat(POS,1,S);
+tempNEG = -repmat(NEG,1,S);
+
+price_imbal_y(imbal_y>=0) = tempPOS(imbal_y>=0);
+price_imbal_y(imbal_y<0) = tempNEG(imbal_y<0);
+
+price_imbal_s = price_imbal_y(sample_i,:);
+
+price_posImbal_y = POS; % [€/MWh] imbalance electricity price during the year
+price_posImbal_s = price_posImbal_y(sample_i); % [€/MWh] imbalance electricity price during the sample duration
+
+price_negImbal_y = NEG; % [€/MWh] imbalance electricity price during the year
+price_negImbal_s = price_negImbal_y(sample_i); % [€/MWh] imbalance electricity price during the sample duration
+
+%Input electric house demand
+%---------------------------
+
+elecD_y = [ reshape(repmat(mhouse1e',quarters,1),days_y*hours*quarters,1),...
+            reshape(repmat(mhouse2e',quarters,1),days_y*hours*quarters,1),...
+            reshape(repmat(mhouse3e',quarters,1),days_y*hours*quarters,1),...
+            reshape(repmat(mhouse4e',quarters,1),days_y*hours*quarters,1),...
+            reshape(repmat(mhouse5e',quarters,1),days_y*hours*quarters,1),...
+            reshape(repmat(mhouse6e',quarters,1),days_y*hours*quarters,1)]/1000; % [MWh] electric demand during the year
+        
+elecD_s = elecD_y(sample_i,:); % [MWh] electric demand during the sample duration
+
+% energy_y = reshape(repmat(mhouse1e+mhouse2e+mhouse3e,quarters,1),days_y*hours*quarters,1);
+% energy_s = energy_y(sample_i);
 
 % Input CHP's
 %------------
 
-Cs0 = 1000; % [kWh] Storage tank capacity
-
 Cu = 6; % Maximum amount of CHP's
 
+% Dimensioning of the CHP's (pre-calculations)
 amount = zeros(Cu,200);
 thermalload = zeros(Cu,200);
 
-[amount(1,:), thermalload(1,:)] = hist(mhouse1h,200);
+[amount(1,:), thermalload(1,:)] = hist(mhouse1h,200); % Make histograms
 [amount(2,:), thermalload(2,:)] = hist(mhouse2h,200);
 [amount(3,:), thermalload(3,:)] = hist(mhouse3h,200);
 [amount(4,:), thermalload(4,:)] = hist(mhouse4h,200);
@@ -142,19 +177,21 @@ thermalload = zeros(Cu,200);
 [amount(6,:), thermalload(6,:)] = hist(mhouse6h,200);
 
 duration = cumsum(flipud(amount'),1);
-thermalload = flipud(thermalload');
+thermalload = flipud(thermalload')/1000;
 
-duration_opt = zeros(Cu,1);
-thermalload_opt = zeros(Cu,1);
+duration_opt = zeros(Cu,1); % [hours] Duration of the optimal thermal load in the heat-load diagram
+thermalload_opt = zeros(Cu,1); % [MW] Optimal maximal thermal load of the CHP for the given load profile
 
+% Dimensioning of the CHP's (real calculations)
 for k=1:Cu
-    loadsquares = duration(:,k).*thermalload(:,k);
-    square_max = max(loadsquares);
-    j = find(loadsquares==square_max);
-    duration_opt(k) = duration(j,k);
-    thermalload_opt(k) = thermalload(j,k);
+    loadsquares = duration(:,k).*thermalload(:,k); % Make an array of all the squares (duration x load)
+    square_max = max(loadsquares); % Find the largest square
+    j = find(loadsquares==square_max); % Find the ID of the largest square
+    duration_opt(k) = duration(j,k); % Duration in the load diagram of the largest square
+    thermalload_opt(k) = thermalload(j,k); % Load in the load diagram of the largest square
 end
 
+% Dimensioning of the CHP's (figure)
 figure(1)
 hold on
 p1=plot(duration(:,Cu_sh),thermalload(:,Cu_sh));
@@ -163,30 +200,25 @@ p2=plot(nan,nan,'s','markeredgecolor',get(h2,'edgecolor'));
 legend([p1,p2],'Thermal load','Largest rectangle');
 title(['Heat-load duration diagram for unit ',num2str(Cu_sh)]);
 xlabel('Load duration [h]');
-ylabel('Thermal load [kWt]');
+ylabel('Thermal load [MW_t]');
 
-%Input heat demand
-%-----------------
+% Input heat demand
+%------------------
 
 heatD_y = [ reshape(repmat(mhouse1h',quarters,1),days_y*hours*quarters,1),...
             reshape(repmat(mhouse2h',quarters,1),days_y*hours*quarters,1),...
             reshape(repmat(mhouse3h',quarters,1),days_y*hours*quarters,1),...
             reshape(repmat(mhouse4h',quarters,1),days_y*hours*quarters,1),...
             reshape(repmat(mhouse5h',quarters,1),days_y*hours*quarters,1),...
-            reshape(repmat(mhouse6h',quarters,1),days_y*hours*quarters,1)]; % [kWh] heat demand during the year
+            reshape(repmat(mhouse6h',quarters,1),days_y*hours*quarters,1)]/1000; % [MWh] heat demand during the year
         
-heatD_s = heatD_y(sample_i,:); % [kWh] heat demand during the sample duration
-            
-tank_cap = 2*[max(heatD_y,[],1)]; % [kWh] Storage tank capacity
-
-%Input energy demand
-%-------------------
-
-% House electricity demand
-energy_y = reshape(repmat(mhouse1e+mhouse2e+mhouse3e,quarters,1),days_y*hours*quarters,1);
-energy_s = energy_y(sample_i);
+heatD_s = heatD_y(sample_i,:); % [MWh] heat demand during the sample duration
 
 % Capacity restrictions
+% ---------------------
+
+tank_cap = 2*max(heatD_y,[],1); % [MWh] Storage tank capacity
+
 Ecap_upVar = 1/quarters*thermalload_opt/Aq0*Ae0;
 Ecap_loVar = 0.5*Ecap_upVar;
 Qcap_upVar = max(heatD_y,[],1)';
@@ -229,11 +261,17 @@ P_c.form = 'full';
 P_c.type = 'parameter';
 P_c.dim =1;
 
-P_i.name='P_i'; %price electricity imbalance
+P_i.name='P_i'; % Imbalance price overproduction
 P_i.val= price_imbal_s;
 P_i.form = 'full';
 P_i.type = 'parameter';
-P_i.dim =1;
+P_i.dim =2;
+
+% P_ineg.name='P_ineg'; % Imbalance price overconsumption
+% P_ineg.val= price_negImbal_s;
+% P_ineg.form = 'full';
+% P_ineg.type = 'parameter';
+% P_ineg.dim =1;
 
 P_n.name='P_n'; %price natural gas
 P_n.val=price_gas_s;

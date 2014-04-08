@@ -17,7 +17,7 @@ set
 parameters
      P_g(i)       price electricity grid (spotprice)
      P_c(i)       price electricity consumption
-     P_i(i)       price electricity imbalance
+     P_i(i,s)     price electricity imbalance
      P_n(i)       price natural gas
      P_st(n)      price startup
 
@@ -120,7 +120,7 @@ equation Investment,Revenue_bidding,Revenue_imbalance_red,Cost_extra_fuel,Fuelco
 
    Revenue_bidding(i)..        R_b(i) =e= E_b*P_g(i);
 
-   Revenue_imbalance_red(i)..  R_ir(i) =e= sum(s, -Pi_s(s)*E_i1(i,s)*E_i(i,s)*P_i(i));
+   Revenue_imbalance_red(i)..  R_ir(i) =e= sum(s, -Pi_s(s)*E_i1(i,s)*E_i(i,s)*P_i(i,s));
 
    Cost_extra_fuel(i)..        C_ef(i) =e= FC_bc(i);
 *- FC_b;
@@ -162,6 +162,11 @@ model qp1 /all /;
 option MIP=cplex;
 solve qp1 using mip maximizing obj;
 
+R_b.l(i)$(not R_b.l(i)) = eps;
+
+R_ir.l(i)$(not R_ir.l(i)) = eps;
+
+FC_bc.l(i)$(not FC_bc.l(i)) = eps;
 
 m_fCHP.l(i,n,s)$(not m_fCHP.l(i,n,s)) = eps;
 
@@ -181,7 +186,7 @@ E_i.l(i,s)$(not E_i.l(i,s)) = eps;
 
 E_b.l$(not E_b.l) = eps;
 
-R_ir.l(i)$(not R_ir.l(i)) = eps;
+
 
 ON.l(i,n,s)$(not ON.l(i,n,s)) = eps;
 
