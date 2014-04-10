@@ -3,10 +3,6 @@ close all
 clc
 path(path,'C:\GAMS\win64\24.2')
 clear gamso;
- load Spot2013
- load Imbalance2013
- load Profiles2012
- load Scenarios
  
 %% General information
 % 
@@ -17,6 +13,10 @@ clear gamso;
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+disp('%%%%%%%%%%%%%%%%%%%      CHP     %%%%%%%%%%%%%%%%%%%%%%%')
+disp('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
+disp('          ')
  
 %{
 ------------------------------------------------------------------
@@ -56,14 +56,28 @@ qstout= Output of the heat storage
 
 %---------------------------------------------
 %% VARIABLES
-
 %-----------------------------------
 %LOADING VARIABLES 
 %Input variables
 %-----------------------------------
 
-%Input constants
-%---------------
+disp('Loading variables...')
+
+load Spot2013 % spotprice of the electricity
+load Imbalance2013 % imbalance prices
+load Profiles2012 % heat and electricity demand of different houses, hotels and offices
+%load Scenarios % different stochastic scenarios for wind imbalance
+load WindTurbine2012 % Normalised wind turbine data (forecast and production)
+
+%-----------------------------------
+%DEFINING VARIABLES 
+%Defining variables
+%-----------------------------------
+
+disp('Defining variables...')
+
+% Input constants
+%----------------
 
 Ae0 = 0.4; % CHP electrical efficiency
 Aq0 = 0.45; % CHP thermal efficiency
@@ -73,12 +87,35 @@ Ns0 = 0.998; % Storage heat efficiency
 Cu_sh = 2; % shown chp
 S_sh = 3; % shown scenario
 
-%Input time (i)
-%--------------
+% Input time (i)
+%---------------
 
-%General
 week = 3; % week of the year
+sample_d = 2; % [days] sample duration
 
+% Input units (n)
+%----------------
+
+N = 6; % number of units (CHP's, houses, etc.)
+
+% Input scenarios (s)
+%--------------------
+
+S_gen = 100; % number of generated scenarios
+S_red = 10; % number of reduced scenarios
+S = S_red; % number of scenarios
+
+%-----------------------------------
+%INITIALISING VARIABLES 
+%Input variables
+%-----------------------------------
+
+disp('Initialising variables...')
+
+% Time (i)
+%---------
+
+% General
 quarters = 4; % quarters per hour
 hours = 24; % hours per day
 days_w = 7; % days per week
@@ -86,13 +123,19 @@ days_y = 365; % days per year
 
 timestep = 1/quarters; % [hours] 15 minutes
 
-sample_h = 2*24; % [hours] sample duration
+sample_h = sample_d*24; % [hours] sample duration
 sample_q = sample_h * quarters; % [quarters] sample duration
 
-period_h = week * days_w * hours; % [hours] period of the year
+period_d = week * days_w; % [days] period of the year
+period_h = period_d * hours; % [hours] period of the year
 period_q = period_h * quarters; % [quarters] period of the year
 
-%Postprocessing
+period_s = floor(period_d/sample_d); % number of complete sample durations in the previous period
+year_s = floor(days_y/sample_d); % number of complete sample durations in a year
+sample_pb = sample_q-(period_d/sample_d-period_s)+1*sample_q:sample_q; % uncomplete part of the sample (beginning)
+sample_pe = 1:(days_y-year_s*sample_d)*hours*quarters-numel(sample_pb); % uncomplete part of the sample (end)
+
+% Postprocessing
 time_i = (1:sample_q)'; % time index vector sample
 time_q = time_i/quarters; % [quarters] time vector sample
 
@@ -100,90 +143,39 @@ sample_i = [1:sample_q] + period_q; % sample period index
 
 total_q=period_q+(sample_q-1); % [quarters] period before and during sample period
 
-%Input scenarios (s)
-%-------------------
+% Units (n)
+%----------
 
-S = size(Error,2);
-% Imbalance
-imbal_y = repmat(Error,days_y,1); % Error is for wind turbine of 1 MW
-imbal_s = imbal_y(sample_i,:);
-
-Pi_st = Prob';
-
-%Input price
-%-----------
-
-% All input prices are for November 2013 unless stated otherwise
-
-% Gas
-gasPrice = 0.040/2*1000; % [€/MWh] gas price (http://epp.eurostat.ec.europa.eu/statistics_explained/index.php/Electricity_and_natural_gas_price_statistics;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_204&lang=en;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_205&lang=en;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_202&lang=en;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_203&lang=en)
-price_gas_y = gasPrice*ones(days_y*hours*quarters,1); % [€/MWh] gas price during the year
-price_gas_s = price_gas_y(sample_i); % [€/MWh] gas price during the sample duration
-
-% Consumption
-price_elecC_d = reshape(repmat([0.15 0.15 0.15 0.15 0.15 0.15 0.15 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.15 0.15],quarters,1),hours*quarters,1)*1000; % [€/MWh] electricity price (day/night, one day)
-price_elecC_y = repmat(price_elecC_d, days_y, 1); % [€/MWh] consumption electricity price during the year
-price_elecC_s = price_elecC_y(sample_i); % [€/MWh] consumption electricity price during the sample duration
-
-% Grid (spotprice)
-price_elecS_y = reshape(repmat(spot,quarters,1),days_y*hours*quarters,1); % [€/MWh] spot electricity price during the year
-price_elecS_s = price_elecS_y(sample_i); % [€/MWh] spot electricity price during the sample duration
-
-% Imbalance
-price_imbal_y = zeros(size(imbal_y));
-tempPOS = repmat(POS,1,S);
-tempNEG = -repmat(NEG,1,S);
-
-price_imbal_y(imbal_y>=0) = tempPOS(imbal_y>=0);
-price_imbal_y(imbal_y<0) = tempNEG(imbal_y<0);
-
-price_imbal_s = price_imbal_y(sample_i,:);
-
-price_posImbal_y = POS; % [€/MWh] imbalance electricity price during the year
-price_posImbal_s = price_posImbal_y(sample_i); % [€/MWh] imbalance electricity price during the sample duration
-
-price_negImbal_y = NEG; % [€/MWh] imbalance electricity price during the year
-price_negImbal_s = price_negImbal_y(sample_i); % [€/MWh] imbalance electricity price during the sample duration
-
-%Input electric house demand
-%---------------------------
-
-elecD_y = [ reshape(repmat(mhouse1e',quarters,1),days_y*hours*quarters,1),...
-            reshape(repmat(mhouse2e',quarters,1),days_y*hours*quarters,1),...
-            reshape(repmat(mhouse3e',quarters,1),days_y*hours*quarters,1),...
-            reshape(repmat(mhouse4e',quarters,1),days_y*hours*quarters,1),...
-            reshape(repmat(mhouse5e',quarters,1),days_y*hours*quarters,1),...
-            reshape(repmat(mhouse6e',quarters,1),days_y*hours*quarters,1)]/1000; % [MWh] electric demand during the year
-        
-elecD_s = elecD_y(sample_i,:); % [MWh] electric demand during the sample duration
-
-% energy_y = reshape(repmat(mhouse1e+mhouse2e+mhouse3e,quarters,1),days_y*hours*quarters,1);
-% energy_s = energy_y(sample_i);
-
-% Input CHP's
-%------------
-
-Cu = 6; % Maximum amount of CHP's
+% General
+N_data = 6; % number of units for which there is unique data
+N_mult = ceil(N/N_data); % smallest multiple of N_data, larger than N (number of units)
 
 % Dimensioning of the CHP's (pre-calculations)
-amount = zeros(Cu,200);
-thermalload = zeros(Cu,200);
+bins = 200;
+amount = zeros(N_data,bins);
+thermalload = zeros(N_data,bins);
 
-[amount(1,:), thermalload(1,:)] = hist(mhouse1h,200); % Make histograms
-[amount(2,:), thermalload(2,:)] = hist(mhouse2h,200);
-[amount(3,:), thermalload(3,:)] = hist(mhouse3h,200);
-[amount(4,:), thermalload(4,:)] = hist(mhouse4h,200);
-[amount(5,:), thermalload(5,:)] = hist(mhouse5h,200);
-[amount(6,:), thermalload(6,:)] = hist(mhouse6h,200);
+[amount(1,:), thermalload(1,:)] = hist(mhouse1h,bins); % Make histograms
+[amount(2,:), thermalload(2,:)] = hist(mhouse2h,bins);
+[amount(3,:), thermalload(3,:)] = hist(mhouse3h,bins);
+[amount(4,:), thermalload(4,:)] = hist(mhouse4h,bins);
+[amount(5,:), thermalload(5,:)] = hist(mhouse5h,bins);
+[amount(6,:), thermalload(6,:)] = hist(mhouse6h,bins);
+
+amount = repmat(amount,N_mult,1);
+amount = amount(1:N,:);
+
+thermalload = repmat(thermalload,N_mult,1);
+thermalload = thermalload(1:N,:);
 
 duration = cumsum(flipud(amount'),1);
 thermalload = flipud(thermalload')/1000;
 
-duration_opt = zeros(Cu,1); % [hours] Duration of the optimal thermal load in the heat-load diagram
-thermalload_opt = zeros(Cu,1); % [MW] Optimal maximal thermal load of the CHP for the given load profile
+duration_opt = zeros(N,1); % [hours] Duration of the optimal thermal load in the heat-load diagram
+thermalload_opt = zeros(N,1); % [MW] Optimal maximal thermal load of the CHP for the given load profile
 
 % Dimensioning of the CHP's (real calculations)
-for k=1:Cu
+for k=1:N
     loadsquares = duration(:,k).*thermalload(:,k); % Make an array of all the squares (duration x load)
     square_max = max(loadsquares); % Find the largest square
     j = find(loadsquares==square_max); % Find the ID of the largest square
@@ -202,6 +194,55 @@ title(['Heat-load duration diagram for unit ',num2str(Cu_sh)]);
 xlabel('Load duration [h]');
 ylabel('Thermal load [MW_t]');
 
+% Price
+%------
+
+% All input prices are for November 2013 unless stated otherwise
+
+% Gas
+gasPrice = 0.040/2*1000; % [€/MWh] gas price (http://epp.eurostat.ec.europa.eu/statistics_explained/index.php/Electricity_and_natural_gas_price_statistics;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_204&lang=en;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_205&lang=en;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_202&lang=en;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_203&lang=en)
+price_gas_y = gasPrice*ones(days_y*hours*quarters,1); % [€/MWh] gas price during the year
+price_gas_s = price_gas_y(sample_i); % [€/MWh] gas price during the sample duration
+
+% Consumption
+price_elecC_d = reshape(repmat([0.15 0.15 0.15 0.15 0.15 0.15 0.15 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.22 0.15 0.15],quarters,1),hours*quarters,1)*1000; % [€/MWh] electricity price (day/night, one day)
+price_elecC_y = repmat(price_elecC_d, days_y, 1); % [€/MWh] consumption electricity price during the year
+price_elecC_s = price_elecC_y(sample_i); % [€/MWh] consumption electricity price during the sample duration
+
+% Grid (spotprice)
+price_elecS_y = reshape(repmat(spot,quarters,1),days_y*hours*quarters,1); % [€/MWh] spot electricity price during the year
+price_elecS_s = price_elecS_y(sample_i); % [€/MWh] spot electricity price during the sample duration
+
+% Input electric house demand
+%----------------------------
+
+elecD_y = [ reshape(repmat(mhouse1e',quarters,1),days_y*hours*quarters,1),...
+            reshape(repmat(mhouse2e',quarters,1),days_y*hours*quarters,1),...
+            reshape(repmat(mhouse3e',quarters,1),days_y*hours*quarters,1),...
+            reshape(repmat(mhouse4e',quarters,1),days_y*hours*quarters,1),...
+            reshape(repmat(mhouse5e',quarters,1),days_y*hours*quarters,1),...
+            reshape(repmat(mhouse6e',quarters,1),days_y*hours*quarters,1)]/1000; % [MWh] electric demand during the year
+        
+elecD_y = repmat(elecD_y,1,N_mult);
+elecD_y = elecD_y(:,1:N);
+        
+elecD_s = elecD_y(sample_i,:); % [MWh] electric demand during the sample duration
+
+% energy_y = reshape(repmat(mhouse1e+mhouse2e+mhouse3e,quarters,1),days_y*hours*quarters,1);
+% energy_s = energy_y(sample_i);
+
+% Input electric wind generation
+%-------------------------------
+
+elecWF_y = TSwind.forecast; % [MWh] forecast of electricity production with wind turbine 
+elecWF_s = elecWF_y(sample_i); % [MWh] forecast of electricity production with wind turbine during the sample duration
+
+elecWP_y = TSwind.production; % [MWh] electricity production with wind turbine 
+elecWP_s = elecWP_y(sample_i); % [MWh] electricity production with wind turbine during the sample duration
+
+erW_y = elecWP_y - elecWF_y; % [MWh] error between production and forecast
+erW_s = erW_y(sample_i); % [MWh] error between production and forecast during the sample duration
+
 % Input heat demand
 %------------------
 
@@ -211,6 +252,9 @@ heatD_y = [ reshape(repmat(mhouse1h',quarters,1),days_y*hours*quarters,1),...
             reshape(repmat(mhouse4h',quarters,1),days_y*hours*quarters,1),...
             reshape(repmat(mhouse5h',quarters,1),days_y*hours*quarters,1),...
             reshape(repmat(mhouse6h',quarters,1),days_y*hours*quarters,1)]/1000; % [MWh] heat demand during the year
+        
+heatD_y = repmat(heatD_y,1,N_mult);
+heatD_y = heatD_y(:,1:N);
         
 heatD_s = heatD_y(sample_i,:); % [MWh] heat demand during the sample duration
 
@@ -224,9 +268,58 @@ Ecap_loVar = 0.5*Ecap_upVar;
 Qcap_upVar = max(heatD_y,[],1)';
 
 %-----------------------------------
-%INITIALIZATION 
+%GENERATE FORECAST SCENARIOS
+%generate the scenarios for the optimisation
+%-----------------------------------
+
+disp('Generating forecast scenarios...')
+
+MU = zeros(1,numel(sample_i)); % average for random matrix
+eps_init = 75; % initial value for covariance matrix
+coef_fit_var = [-0.000028,0.0013,0.0037]; % coefficients of quadratic fit that compensates for the higher variability of wind at intermediate wind power forecasts 
+norm_var = 0.0188; % normalization of quadratic fit
+load('WPFE_ep.mat','pdf_stable','w_int','error_vec');
+cdf_stable = cumsum(pdf_stable')';
+load('WPFE_ee.mat','pdf_stable_ee','w_ee');
+ff_mode = 'Old'; % scenario reduction mode (Old or Advanced)
+
+[scen_lim,scen_red] = SCEN(S_gen,MU,eps_init,coef_fit_var,norm_var,elecWF_s,...
+    sample_q,cdf_stable,pdf_stable,pdf_stable_ee,w_int,w_ee,error_vec,...
+    S_red-1,erW_s,ff_mode);
+
+%-----------------------------------
+%POSTPROCESSING SCENARIOS
+%Postprocessing
+%-----------------------------------
+
+disp('Postprocessing scenarios...')
+
+imbal_y = [scen_red.error(sample_pb); repmat(scen_red.error,year_s,1); scen_red.error(sample_pb)]; % Error is for wind turbine of 1 MW
+imbal_s = scen_red.error;
+Pi_st = scen_red.prob';
+
+% Imbalance
+price_imbal_y = zeros(size(imbal_y));
+tempPOS = repmat(POS,1,S);
+tempNEG = -repmat(NEG,1,S);
+
+price_imbal_y(imbal_y>=0) = tempPOS(imbal_y>=0);
+price_imbal_y(imbal_y<0) = tempNEG(imbal_y<0);
+
+price_imbal_s = price_imbal_y(sample_i,:);
+
+price_posImbal_y = POS; % [€/MWh] imbalance electricity price during the year
+price_posImbal_s = price_posImbal_y(sample_i); % [€/MWh] imbalance electricity price during the sample duration
+
+price_negImbal_y = NEG; % [€/MWh] imbalance electricity price during the year
+price_negImbal_s = price_negImbal_y(sample_i); % [€/MWh] imbalance electricity price during the sample duration
+
+%-----------------------------------
+%PREPARE FOR DAY AHEAD OPTIMALISATION
 %Input variables in structure form 
 %-----------------------------------
+
+disp('Preparing for day-ahead optimisation...')
 
 %Input sets
 %----------
@@ -238,7 +331,7 @@ i.type ='set';
 
 n.name='n'; %Unit
 %unit.val= 1:15;
-n.uels = {{1:Cu}};             
+n.uels = {{1:N}};             
 n.type ='set';
 
 s.name='s'; %Scenario
@@ -280,7 +373,7 @@ P_n.type = 'parameter';
 P_n.dim =1;
 
 P_st.name='P_st'; %price startup
-P_st.val=100*ones(Cu,1);
+P_st.val=100*ones(N,1);
 P_st.form = 'full';
 P_st.type = 'parameter';
 P_st.dim =1;
@@ -306,25 +399,25 @@ Q_H.dim =2;
 
 
 Nb.name='Nb'; %thermal efficiency boiler
-Nb.val=Nb0*ones(Cu,1);
+Nb.val=Nb0*ones(N,1);
 Nb.form = 'full';
 Nb.type = 'parameter';
 Nb.dim =1;
 
 Ns.name='Ns'; %thermal efficiency storage
-Ns.val=Ns0*ones(Cu,1);
+Ns.val=Ns0*ones(N,1);
 Ns.form = 'full';
 Ns.type = 'parameter';
 Ns.dim =1;
 
 Ae.name='Ae'; %electrical efficiency CHP
-Ae.val=Ae0*ones(Cu,1);
+Ae.val=Ae0*ones(N,1);
 Ae.form = 'full';
 Ae.type = 'parameter';
 Ae.dim =1;
 
 Aq.name='Aq'; %thermal efficiency CHP
-Aq.val=Aq0*ones(Cu,1);
+Aq.val=Aq0*ones(N,1);
 Aq.form = 'full';
 Aq.type = 'parameter';
 Aq.dim =1;
@@ -375,11 +468,12 @@ indexp=0;
 index_m=0;
 
 %% CALL GAMS 
-
 %-----------------------------------
 %OPTIMIZATION
 %Calls GAMS routine 
 %-----------------------------------
+
+disp('Optimising...')
 
 % Calculate investment costs (optimal)
 %-------------------------------------
@@ -432,9 +526,9 @@ down = 1;
 % expensive to compensate). This part of the code let you calculate a
 % random case (you can select one from the output of the previous part).
 
-Cust = Cu; % Custopt;
+Cust = N; % Custopt;
 
-BUYst.val=[ones(1,Cust) zeros(1,Cu-Cust)];
+BUYst.val=[ones(1,Cust) zeros(1,N-Cust)];
     wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,dt);
 
     gams('CHP');%LOCAL PRICE IS TAKEN INTO ACCOUNT 
@@ -443,14 +537,14 @@ BUYst.val=[ones(1,Cust) zeros(1,Cu-Cust)];
     r = rgdx ('results', rs);
     obj=r.val(:,1);
     o1 = obj/Cust;
-    [obj Cust o1]
 
 %% RESULTS 
-
 %-----------------------------------
 %LOADING RESULTS
 %Reading parameters
 %-----------------------------------
+
+disp('Loading results...')
 
 % Objective
 rs.name = 'obj';
@@ -475,70 +569,70 @@ FC_bc(time_i,1)=r.val(time_i,2);
 % CHP fuelflow
 rs.name = 'm_fCHP';
 r = rgdx ('results', rs);
-m_fCHP = zeros(sample_q,Cu,S);
-for j=1:Cu
+m_fCHP = zeros(sample_q,N,S);
+for j=1:N
     for k=1:S
-        m_fCHP(time_i,j,k)=r.val((time_i-1)*Cu*S+(j-1)*S+k,4);
+        m_fCHP(time_i,j,k)=r.val((time_i-1)*N*S+(j-1)*S+k,4);
     end
 end
 
 % Boiler fuelflow
 rs.name = 'm_fB';
 r = rgdx ('results', rs);
-m_fB = zeros(sample_q,Cu,S);
-for j=1:Cu
+m_fB = zeros(sample_q,N,S);
+for j=1:N
     for k=1:S
-        m_fB(time_i,j,k)=r.val((time_i-1)*Cu*S+(j-1)*S+k,4);
+        m_fB(time_i,j,k)=r.val((time_i-1)*N*S+(j-1)*S+k,4);
     end
 end
 
 % CHP heat supply
 rs.name = 'Q_CHP'; 
 r = rgdx ('results', rs);
-Q_CHP = zeros(sample_q,Cu,S);
-for j=1:Cu
+Q_CHP = zeros(sample_q,N,S);
+for j=1:N
     for k=1:S
-        Q_CHP(time_i,j,k)=r.val((time_i-1)*Cu*S+(j-1)*S+k,4);
+        Q_CHP(time_i,j,k)=r.val((time_i-1)*N*S+(j-1)*S+k,4);
     end
 end
 
 % Boiler heat supply
 rs.name = 'Q_B';
 r = rgdx ('results', rs);
-Q_B = zeros(sample_q,Cu,S);
-for j=1:Cu
+Q_B = zeros(sample_q,N,S);
+for j=1:N
     for k=1:S
-        Q_B(time_i,j,k)=r.val((time_i-1)*Cu*S+(j-1)*S+k,4);
+        Q_B(time_i,j,k)=r.val((time_i-1)*N*S+(j-1)*S+k,4);
     end
 end
  
 % Storage heat supply
 rs.name = 'DeltaQ_S';
 r = rgdx ('results', rs); 
-DeltaQ_S = zeros(sample_q,Cu,S);
-for j=1:Cu
+DeltaQ_S = zeros(sample_q,N,S);
+for j=1:N
     for k=1:S
-        DeltaQ_S(time_i,j,k)=r.val((time_i-1)*Cu*S+(j-1)*S+k,4);
+        DeltaQ_S(time_i,j,k)=r.val((time_i-1)*N*S+(j-1)*S+k,4);
     end
 end
 
 % Storage heat volume
 rs.name = 'Q_S';
 r = rgdx ('results', rs);
-Q_S = zeros(sample_q,Cu,S);
-for j=1:Cu
+Q_S = zeros(sample_q,N,S);
+for j=1:N
     for k=1:S
-        Q_S(time_i,j,k)=r.val((time_i-1)*Cu*S+(j-1)*S+k,4);
+        Q_S(time_i,j,k)=r.val((time_i-1)*N*S+(j-1)*S+k,4);
     end
 end
 
 % CHP energy supply
 rs.name = 'E_CHP';
 r = rgdx ('results', rs);
-E_CHP = zeros(sample_q,Cu,S);
-for j=1:Cu
+E_CHP = zeros(sample_q,N,S);
+for j=1:N
     for k=1:S
-        E_CHP(time_i,j,k)=r.val((time_i-1)*Cu*S+(j-1)*S+k,4);
+        E_CHP(time_i,j,k)=r.val((time_i-1)*N*S+(j-1)*S+k,4);
     end
 end
 
@@ -557,10 +651,10 @@ E_b=r.val*ones(size(sample_i')); % Array to make it easier for plotting
 
 rs.name = 'ON';
 r = rgdx ('results', rs);
-ON = zeros(sample_q,Cu,S);
-for j=1:Cu
+ON = zeros(sample_q,N,S);
+for j=1:N
     for k=1:S
-        ON(time_i,j,k)=r.val((time_i-1)*Cu*S+(j-1)*S+k,4);
+        ON(time_i,j,k)=r.val((time_i-1)*N*S+(j-1)*S+k,4);
     end
 end
 
@@ -573,17 +667,32 @@ BUY=r.val(:,2);
 %Postproces data
 %-----------------------------------
 
+disp('Postprocessing results...')
+
 %R_b = E_b.*P_g.val;
 %R_i = abs(E_i*Pi_s.val).*P_i.val;
 
 profit = R_b + R_ir - FC_bc;
 
-profit_t = sum(profit,1) % [€] total profit
+profit_t = sum(profit,1); % [€] total profit
 
+%% Comparison
+%-----------------------------------
+%COMPARE WITH ACTUALS
+%Comparison
+%-----------------------------------
+
+disp('Comparing with actuals...')
+
+% TODO
+
+%% Figures
 %-----------------------------------
 %SHOWING RESULTS
 %Making figures
 %-----------------------------------
+
+disp('Drawing figures...')
 
 figure(2)
 plot(time_q,[E_i0.val(:,S_sh), E_b, E_i(:,S_sh)])
@@ -670,3 +779,13 @@ ylabel('Money [€]');
 % plot(i,qst1,'k--')
 % xlabel('Time [h]')
 % legend('Heatflow to storage', 'Storage')
+
+%% Data
+%-----------------------------------
+%SHOWING RESULTS
+%show data
+%-----------------------------------
+
+disp('    ')
+disp('DATA')
+disp([' Profit: €',num2str(profit_t)])
