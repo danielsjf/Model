@@ -2,7 +2,7 @@
 function [scen_lim,scen_red] = SCEN(n_scen_gen,MU,eps_init,coef_fit_var,norm_var,forecast,samples_scenario,cdf_stable,pdf_stable,pdf_stable_ee,w_int,w_ee,error_vec,n_scen_select,actual_realization,ff_mode)   
     tic
     %% Scenario generation
-    disp(' Scenario generation...')
+    disp('    Scenario generation...')
 
     % Generating histogram (without the function)
     forecast_pb = zeros(samples_scenario,1); % bin in which each forecast belongs
@@ -50,7 +50,7 @@ function [scen_lim,scen_red] = SCEN(n_scen_gen,MU,eps_init,coef_fit_var,norm_var
     n_scen_gen = n_scen_gen+2;    
 
     %% Probability Calculation
-    disp(' Probability calculation...')
+    disp('    Probability calculation...')
     
     % Initalisation 
     scen_prob_mat = zeros(samples_scenario*2,n_scen_gen);
@@ -137,7 +137,7 @@ function [scen_lim,scen_red] = SCEN(n_scen_gen,MU,eps_init,coef_fit_var,norm_var
     n_scen_gen = length(scen_prob);
             
     %% Scenario reduction 
-    disp(' Scenario reduction: Fast Forward...')
+    disp('    Scenario reduction: Fast Forward...')
     
     % Initialize the set of selected scenarios
     select_scen = zeros(n_scen_select,1);
@@ -229,7 +229,7 @@ function [scen_lim,scen_red] = SCEN(n_scen_gen,MU,eps_init,coef_fit_var,norm_var
     scen_prob = scen_prob/sum(scen_prob);
     
     time = toc;
-    disp([' Done! Time elapsed: ',num2str(time),' s'])
+    disp(['    Done! Time elapsed: ',num2str(time),' s'])
   
     % Output
     scen_lim.error = scen_error;

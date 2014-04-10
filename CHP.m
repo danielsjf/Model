@@ -197,8 +197,6 @@ ylabel('Thermal load [MW_t]');
 % Price
 %------
 
-% All input prices are for November 2013 unless stated otherwise
-
 % Gas
 gasPrice = 0.040/2*1000; % [€/MWh] gas price (http://epp.eurostat.ec.europa.eu/statistics_explained/index.php/Electricity_and_natural_gas_price_statistics;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_204&lang=en;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_205&lang=en;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_202&lang=en;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_203&lang=en)
 price_gas_y = gasPrice*ones(days_y*hours*quarters,1); % [€/MWh] gas price during the year
@@ -274,6 +272,11 @@ Qcap_upVar = max(heatD_y,[],1)';
 
 disp('Generating forecast scenarios...')
 
+% Wind generation
+%----------------
+
+disp('  * Wind generation')
+
 MU = zeros(1,numel(sample_i)); % average for random matrix
 eps_init = 75; % initial value for covariance matrix
 coef_fit_var = [-0.000028,0.0013,0.0037]; % coefficients of quadratic fit that compensates for the higher variability of wind at intermediate wind power forecasts 
@@ -287,6 +290,36 @@ ff_mode = 'Old'; % scenario reduction mode (Old or Advanced)
     sample_q,cdf_stable,pdf_stable,pdf_stable_ee,w_int,w_ee,error_vec,...
     S_red-1,erW_s,ff_mode);
 
+% Spotprice
+%----------
+
+disp('  * Spotprice')
+
+% TODO
+% Based upon historic data?
+
+% Heat demand
+%------------
+
+disp('  * Heat demand')
+
+% TODO
+% Based upon historic data?
+
+% Imbalance prices
+%-----------------
+
+disp('  * Imbalance prices')
+
+% TODO
+% Based upon historic data?
+
+% Gasprice
+%---------
+
+% TODO
+% Probably not necessary since one price is used for the whole year
+
 %-----------------------------------
 %POSTPROCESSING SCENARIOS
 %Postprocessing
@@ -294,11 +327,17 @@ ff_mode = 'Old'; % scenario reduction mode (Old or Advanced)
 
 disp('Postprocessing scenarios...')
 
+% Wind generation
+%----------------
+
+disp('  * Wind generation')
+
+% Imbalance forecasts (error)
 imbal_y = [scen_red.error(sample_pb); repmat(scen_red.error,year_s,1); scen_red.error(sample_pb)]; % Error is for wind turbine of 1 MW
 imbal_s = scen_red.error;
 Pi_st = scen_red.prob';
 
-% Imbalance
+% Imbalance prices (relation to error)
 price_imbal_y = zeros(size(imbal_y));
 tempPOS = repmat(POS,1,S);
 tempNEG = -repmat(NEG,1,S);
@@ -313,6 +352,27 @@ price_posImbal_s = price_posImbal_y(sample_i); % [€/MWh] imbalance electricity p
 
 price_negImbal_y = NEG; % [€/MWh] imbalance electricity price during the year
 price_negImbal_s = price_negImbal_y(sample_i); % [€/MWh] imbalance electricity price during the sample duration
+
+% Spotprice
+%----------
+
+disp('  * Spotprice')
+
+% TODO
+
+% Heat demand
+%------------
+
+disp('  * Heat demand')
+
+% TODO
+
+% Imbalance prices
+%-----------------
+
+disp('  * Imbalance prices')
+
+% TODO
 
 %-----------------------------------
 %PREPARE FOR DAY AHEAD OPTIMALISATION
@@ -473,7 +533,7 @@ index_m=0;
 %Calls GAMS routine 
 %-----------------------------------
 
-disp('Optimising...')
+disp('Optimising day-ahead...')
 
 % Calculate investment costs (optimal)
 %-------------------------------------
@@ -544,7 +604,7 @@ BUYst.val=[ones(1,Cust) zeros(1,N-Cust)];
 %Reading parameters
 %-----------------------------------
 
-disp('Loading results...')
+disp('Loading results day-ahead optimisation...')
 
 % Objective
 rs.name = 'obj';
@@ -667,7 +727,7 @@ BUY=r.val(:,2);
 %Postproces data
 %-----------------------------------
 
-disp('Postprocessing results...')
+disp('Postprocessing results day-ahead optimisation...')
 
 %R_b = E_b.*P_g.val;
 %R_i = abs(E_i*Pi_s.val).*P_i.val;
@@ -678,11 +738,20 @@ profit_t = sum(profit,1); % [€] total profit
 
 %% Comparison
 %-----------------------------------
+%CALCULATE ACTUALS
+%Calculate
+%-----------------------------------
+
+disp('Calculating actuals...')
+
+% TODO
+
+%-----------------------------------
 %COMPARE WITH ACTUALS
 %Comparison
 %-----------------------------------
 
-disp('Comparing with actuals...')
+disp('Comparing actuals with day-ahead optimisation...')
 
 % TODO
 
