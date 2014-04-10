@@ -39,6 +39,8 @@ parameters
      Qcap_up(n)   maximal thermal energy supply boiler
 
      Cs(n)        storage tank capacity
+     bid          bid on the day-ahead market
+     bid_bool     bid done on the market (0 is false and 1 is true)
      BUYst(n)     startvalue CHP's;
 
 
@@ -47,7 +49,7 @@ Scalar
 
 
 $gdxin inputs
-$load i n s P_g P_c P_i P_n P_st E_i0 E_i1 Q_H Nb Ns Ae Aq Pi_s Ecap_lo Ecap_up Qcap_up Cs dt
+$load i n s P_g P_c P_i P_n P_st E_i0 E_i1 Q_H Nb Ns Ae Aq Pi_s Ecap_lo Ecap_up Qcap_up Cs bid bid_bool dt
 $gdxin
 
 *$if exist matdata.gms  $include matdata.gms
@@ -97,6 +99,8 @@ positive variables m_fCHP(i,n,s),m_fB(i,n,s),E_CHP(i,n,s),Q_CHP(i,n,s),Q_B(i,n,s
      E_b.up = sum(n, Ecap_up(n));
      Q_S.fx('192',n,s)= 0;
      Q_S.up(i,n,s)= Cs(n);
+
+     E_b.fx$(bid_bool) = bid;  
 
 
 binary variable ON(i,n,s),BUY(n);

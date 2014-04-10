@@ -39,6 +39,8 @@ parameters
      Qcap_up(n)   maximal thermal energy supply boiler
 
      Cs(n)        storage tank capacity
+     bid          bid on the day-ahead market
+     bid_bool     bid done on the market (0 is false and 1 is true)
      BUYst(n)     startvalue CHP's;
 
 
@@ -47,7 +49,7 @@ Scalar
 
 
 $gdxin inputs
-$load i n s P_g P_c P_i P_n P_st E_i0 E_i1 Q_H Nb Ns Ae Aq Pi_s Ecap_lo Ecap_up Qcap_up Cs dt
+$load i n s P_g P_c P_i P_n P_st E_i0 E_i1 Q_H Nb Ns Ae Aq Pi_s Ecap_lo Ecap_up Qcap_up Cs bid bid_bool dt
 $gdxin
 
 *$if exist matdata.gms  $include matdata.gms
@@ -83,6 +85,8 @@ variables
 
      DeltaQ_S.lo(i,n,s) = -Qcap_up(n);
      DeltaQ_S.up(i,n,s) = Qcap_up(n);
+
+     E_b.fx$(bid_bool) = bid;
 
 
 positive variables m_fCHP(i,n,s),m_fB(i,n,s),E_CHP(i,n,s),Q_CHP(i,n,s),Q_B(i,n,s),Q_S(i,n,s),E_b;
@@ -120,7 +124,7 @@ equation Investment,Revenue_bidding,Revenue_imbalance_red,Cost_extra_fuel,Fuelco
 
    Revenue_bidding(i)..        R_b(i) =e= E_b*P_g(i);
 
-   Revenue_imbalance_red(i)..  R_ir(i) =e= sum(s, -Pi_s(s)*E_i1(i,s)*E_i(i,s)*P_i(i));
+   Revenue_imbalance_red(i)..  R_ir(i) =e= sum(s, -Pi_s(s)*E_i1(i,s)*E_i(i,s)*P_i(i,s));
 
    Cost_extra_fuel(i)..        C_ef(i) =e= FC_bc(i);
 *- FC_b;

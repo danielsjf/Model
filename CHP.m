@@ -381,151 +381,11 @@ disp('  * Imbalance prices')
 
 disp('Preparing for day-ahead optimisation...')
 
-%Input sets
-%----------
-
-i.name='i'; %Time
-%final.val= 1:15;
-i.uels = {{1:sample_q}};             
-i.type ='set';
-
-n.name='n'; %Unit
-%unit.val= 1:15;
-n.uels = {{1:N}};             
-n.type ='set';
-
-s.name='s'; %Scenario
-%unit.val= 1:15;
-s.uels = {{1:S}};             
-s.type ='set';
-
-%Input parameters
-%----------------
-
-P_g.name='P_g'; %price electricity grid (spotprice)
-P_g.val=price_elecS_s; % [€/kWh]
-P_g.form = 'full';
-P_g.type = 'parameter';
-P_g.dim =1;
-
-P_c.name='P_c'; %price electricity consumption
-P_c.val= price_elecC_s; % Constant price
-P_c.form = 'full';
-P_c.type = 'parameter';
-P_c.dim =1;
-
-P_i.name='P_i'; % Imbalance price overproduction
-P_i.val= price_imbal_s;
-P_i.form = 'full';
-P_i.type = 'parameter';
-P_i.dim =2;
-
-% P_ineg.name='P_ineg'; % Imbalance price overconsumption
-% P_ineg.val= price_negImbal_s;
-% P_ineg.form = 'full';
-% P_ineg.type = 'parameter';
-% P_ineg.dim =1;
-
-P_n.name='P_n'; %price natural gas
-P_n.val=price_gas_s;
-P_n.form = 'full';
-P_n.type = 'parameter';
-P_n.dim =1;
-
-P_st.name='P_st'; %price startup
-P_st.val=100*ones(N,1);
-P_st.form = 'full';
-P_st.type = 'parameter';
-P_st.dim =1;
-
-
-E_i0.name='E_i0'; %electricity demand imbalance
-E_i0.val=imbal_s;
-E_i0.form = 'full';
-E_i0.type = 'parameter';
-E_i0.dim =2;
-
-E_i1.name='E_i1'; %electricity demand imbalance
-E_i1.val=sign(imbal_s);
-E_i1.form = 'full';
-E_i1.type = 'parameter';
-E_i1.dim =2;
-
-Q_H.name='Q_H'; %heat demand house
-Q_H.val=heatD_s;
-Q_H.form = 'full';
-Q_H.type = 'parameter';
-Q_H.dim =2;
-
-
-Nb.name='Nb'; %thermal efficiency boiler
-Nb.val=Nb0*ones(N,1);
-Nb.form = 'full';
-Nb.type = 'parameter';
-Nb.dim =1;
-
-Ns.name='Ns'; %thermal efficiency storage
-Ns.val=Ns0*ones(N,1);
-Ns.form = 'full';
-Ns.type = 'parameter';
-Ns.dim =1;
-
-Ae.name='Ae'; %electrical efficiency CHP
-Ae.val=Ae0*ones(N,1);
-Ae.form = 'full';
-Ae.type = 'parameter';
-Ae.dim =1;
-
-Aq.name='Aq'; %thermal efficiency CHP
-Aq.val=Aq0*ones(N,1);
-Aq.form = 'full';
-Aq.type = 'parameter';
-Aq.dim =1;
-
-Pi_s.name='Pi_s'; %probability scenario
-Pi_s.val=Pi_st;
-Pi_s.form = 'full';
-Pi_s.type = 'parameter';
-Pi_s.dim =1;
-
-Ecap_lo.name='Ecap_lo'; %minimal electric energy supply CHP
-Ecap_lo.val=Ecap_loVar;
-Ecap_lo.form = 'full';
-Ecap_lo.type = 'parameter';
-Ecap_lo.dim =1;
-
-Ecap_up.name='Ecap_up'; %maximal electric energy supply CHP
-Ecap_up.val=Ecap_upVar;
-Ecap_up.form = 'full';
-Ecap_up.type = 'parameter';
-Ecap_up.dim =1;
-
-Qcap_up.name='Qcap_up'; %maximal thermal energy supply boiler
-Qcap_up.val=Qcap_upVar;
-Qcap_up.form = 'full';
-Qcap_up.type = 'parameter';
-Qcap_up.dim =1;
-
-Cs.name='Cs'; %storage tank capacity
-Cs.val=tank_cap;
-Cs.form = 'full';
-Cs.type = 'parameter';
-Cs.dim =1;
-
-dt.name='dt'; %delta t for the storage time period analyzed 0.25for 15 min
-dt.val=1/quarters;
-dt.type = 'parameter';
-dt.dim=0;
-
-% BUYst.name='BUYst'; %storage tank capacity
-% BUYst.val=[ones(1,Cust) zeros(1,Cu-Cust)];
-% BUYst.form = 'full';
-% BUYst.type = 'parameter';
-% BUYst.dim =1;
-
-index=0;
-indexp=0;
-index_m=0;
+[i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,...
+    Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,dt] = GAMSWRITE(sample_q,N,...
+    S,price_elecS_s,price_elecC_s,price_imbal_s,price_gas_s,imbal_s,...
+    heatD_s,Nb0,Ns0,Ae0,Aq0,Pi_st,Ecap_loVar,Ecap_upVar,Qcap_upVar,...
+    tank_cap,0,0,quarters);
 
 %% CALL GAMS 
 %-----------------------------------
@@ -589,7 +449,7 @@ down = 1;
 Cust = N; % Custopt;
 
 BUYst.val=[ones(1,Cust) zeros(1,N-Cust)];
-    wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,dt);
+    wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,dt);
 
     gams('CHP');%LOCAL PRICE IS TAKEN INTO ACCOUNT 
     
@@ -606,121 +466,7 @@ BUYst.val=[ones(1,Cust) zeros(1,N-Cust)];
 
 disp('Loading results day-ahead optimisation...')
 
-% Objective
-rs.name = 'obj';
-r = rgdx ('results', rs);
-obj=r.val(:,1); 
-
-% Bidding revenue
-rs.name = 'R_b';
-r = rgdx ('results', rs);
-R_b(time_i,1)=r.val(time_i,2);
-
-% Imbalance reduction revenue
-rs.name = 'R_ir';
-r = rgdx ('results', rs);
-R_ir(time_i,1)=r.val(time_i,2);
-
-% Boiler and CHP fuelcost
-rs.name = 'FC_bc';
-r = rgdx ('results', rs);
-FC_bc(time_i,1)=r.val(time_i,2);
-
-% CHP fuelflow
-rs.name = 'm_fCHP';
-r = rgdx ('results', rs);
-m_fCHP = zeros(sample_q,N,S);
-for j=1:N
-    for k=1:S
-        m_fCHP(time_i,j,k)=r.val((time_i-1)*N*S+(j-1)*S+k,4);
-    end
-end
-
-% Boiler fuelflow
-rs.name = 'm_fB';
-r = rgdx ('results', rs);
-m_fB = zeros(sample_q,N,S);
-for j=1:N
-    for k=1:S
-        m_fB(time_i,j,k)=r.val((time_i-1)*N*S+(j-1)*S+k,4);
-    end
-end
-
-% CHP heat supply
-rs.name = 'Q_CHP'; 
-r = rgdx ('results', rs);
-Q_CHP = zeros(sample_q,N,S);
-for j=1:N
-    for k=1:S
-        Q_CHP(time_i,j,k)=r.val((time_i-1)*N*S+(j-1)*S+k,4);
-    end
-end
-
-% Boiler heat supply
-rs.name = 'Q_B';
-r = rgdx ('results', rs);
-Q_B = zeros(sample_q,N,S);
-for j=1:N
-    for k=1:S
-        Q_B(time_i,j,k)=r.val((time_i-1)*N*S+(j-1)*S+k,4);
-    end
-end
- 
-% Storage heat supply
-rs.name = 'DeltaQ_S';
-r = rgdx ('results', rs); 
-DeltaQ_S = zeros(sample_q,N,S);
-for j=1:N
-    for k=1:S
-        DeltaQ_S(time_i,j,k)=r.val((time_i-1)*N*S+(j-1)*S+k,4);
-    end
-end
-
-% Storage heat volume
-rs.name = 'Q_S';
-r = rgdx ('results', rs);
-Q_S = zeros(sample_q,N,S);
-for j=1:N
-    for k=1:S
-        Q_S(time_i,j,k)=r.val((time_i-1)*N*S+(j-1)*S+k,4);
-    end
-end
-
-% CHP energy supply
-rs.name = 'E_CHP';
-r = rgdx ('results', rs);
-E_CHP = zeros(sample_q,N,S);
-for j=1:N
-    for k=1:S
-        E_CHP(time_i,j,k)=r.val((time_i-1)*N*S+(j-1)*S+k,4);
-    end
-end
-
-% Imbalance reduction
-rs.name = 'E_i';
-r = rgdx ('results', rs);
-E_i = zeros(sample_q,S);
-for j=1:S
-    E_i(time_i,j)=r.val((time_i-1)*S+j,3);
-end
-
-% Bidding price
-rs.name = 'E_b';
-r = rgdx ('results', rs);
-E_b=r.val*ones(size(sample_i')); % Array to make it easier for plotting
-
-rs.name = 'ON';
-r = rgdx ('results', rs);
-ON = zeros(sample_q,N,S);
-for j=1:N
-    for k=1:S
-        ON(time_i,j,k)=r.val((time_i-1)*N*S+(j-1)*S+k,4);
-    end
-end
-
-rs.name = 'BUY';
-r = rgdx ('results', rs);
-BUY=r.val(:,2);
+[da.obj,da.R_b,da.R_ir,da.FC_bc,da.m_fCHP,da.m_fB,da.Q_CHP,da.Q_B,da.DeltaQ_S,da.Q_S,da.E_CHP,da.E_i,da.E_b,da.ON] = GAMSREAD(time_i,sample_q,N,S,sample_i);
 
 %-----------------------------------
 %POSTPROCESSING RESULTS
@@ -730,9 +476,9 @@ BUY=r.val(:,2);
 disp('Postprocessing results day-ahead optimisation...')
 
 %R_b = E_b.*P_g.val;
-%R_i = abs(E_i*Pi_s.val).*P_i.val;
+%R_i = abs(E_i*Pi_st).*P_i.val;
 
-profit = R_b + R_ir - FC_bc;
+profit = da.R_b + da.R_ir - da.FC_bc;
 
 profit_t = sum(profit,1); % [€] total profit
 
@@ -744,7 +490,29 @@ profit_t = sum(profit,1); % [€] total profit
 
 disp('Calculating actuals...')
 
-% TODO
+%Input sets
+%----------
+
+i.uels = {{1:sample_q}};             
+n.uels = {{1:N}};             
+s.uels = {{1:S}};             
+
+
+%Input parameters
+%----------------
+
+[i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,...
+    Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,dt] = GAMSWRITE(sample_q,N,...
+    S,price_elecS_s,price_elecC_s,price_imbal_s,price_gas_s,imbal_s,...
+    heatD_s,Nb0,Ns0,Ae0,Aq0,Pi_st,Ecap_loVar,Ecap_upVar,Qcap_upVar,...
+    tank_cap,da.E_b(1),1,quarters);
+
+BUYst.val=[ones(1,Cust) zeros(1,N-Cust)];
+    wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,dt);
+
+    gams('CHP');%LOCAL PRICE IS TAKEN INTO ACCOUNT 
+
+[a.obj,a.R_b,a.R_ir,a.FC_bc,a.m_fCHP,a.m_fB,a.Q_CHP,a.Q_B,a.DeltaQ_S,a.Q_S,a.E_CHP,a.E_i,a.E_b,a.ON] = GAMSREAD(time_i,sample_q,N,S,sample_i);
 
 %-----------------------------------
 %COMPARE WITH ACTUALS
@@ -764,20 +532,20 @@ disp('Comparing actuals with day-ahead optimisation...')
 disp('Drawing figures...')
 
 figure(2)
-plot(time_q,[E_i0.val(:,S_sh), E_b, E_i(:,S_sh)])
+plot(time_q,[imbal_s(:,S_sh), da.E_b, da.E_i(:,S_sh)])
 title(['Imbalance for scenario ',num2str(S_sh)]);
 legend('Wind imbalance','Bidding','Imbalance reduction');
 
 figure(3)
 subplot(2,1,1)
-plot(time_q,Q_S(:,:,S_sh))
+plot(time_q,da.Q_S(:,:,S_sh))
 title(['Storage for scenario ',num2str(S_sh), ' (all units)']);
 subplot(2,1,2)
-plot(time_q,DeltaQ_S(:,:,S_sh))
+plot(time_q,da.DeltaQ_S(:,:,S_sh))
 title(['Storage heat supply for scenario ',num2str(S_sh), ' (all units)']);
 
 figure(4)
-plot(time_q,[Q_S(:,Cu_sh,S_sh),DeltaQ_S(:,Cu_sh,S_sh)]);
+plot(time_q,[da.Q_S(:,Cu_sh,S_sh),da.DeltaQ_S(:,Cu_sh,S_sh)]);
 legend('Storage','Storage heat supply');
 title(['Storage unit ',num2str(Cu_sh),' for scenario ',num2str(S_sh)]);
 xlabel('Time [h]');
@@ -785,46 +553,46 @@ ylabel('Heat [kWh]');
 
 figure(5)
 subplot(2,1,1)
-plot(time_q,E_CHP(:,:,S_sh))
+plot(time_q,da.E_CHP(:,:,S_sh))
 title(['CHP energy supply for scenario ',num2str(S_sh)]);
 xlabel('Time [h]');
 ylabel('Energy [kWh]');
 subplot(2,1,2)
-plot(time_q,Q_CHP(:,:,S_sh))
+plot(time_q,da.Q_CHP(:,:,S_sh))
 title(['CHP heat supply for scenario ',num2str(S_sh)]);
 xlabel('Time [h]');
 ylabel('Heat [kWh]');
 
 figure(6)
-plot(time_q,[Q_H.val(:,Cu_sh),Q_B(:,Cu_sh,S_sh),Q_CHP(:,Cu_sh,S_sh)])
+plot(time_q,[heatD_s(:,Cu_sh),da.Q_B(:,Cu_sh,S_sh),da.Q_CHP(:,Cu_sh,S_sh)])
 legend('House heat demand','Boiler heat supply','CHP heat supply');
 title(['Heating unit ',num2str(Cu_sh),' for scenario ',num2str(S_sh)]);
 xlabel('Time [h]');
 ylabel('Heat [kWh]');
 
 figure(7)
-plot(time_q,[sum(m_fB(:,:,S_sh),2),sum(m_fCHP(:,:,S_sh),2)])
+plot(time_q,[sum(da.m_fB(:,:,S_sh),2),sum(da.m_fCHP(:,:,S_sh),2)])
 legend('Total fuelflow Boilers','Total fuelflow CHPs');
 title(['Total fuelflow for scenario ',num2str(S_sh)]);
 xlabel('Time [h]');
 ylabel('Fuelflow [kWh]');
 
 figure(8)
-plot(time_q,[E_i0.val(:,S_sh),E_CHP(:,Cu_sh,S_sh),E_b(:),E_i(:,S_sh)])
+plot(time_q,[imbal_s(:,S_sh),da.E_CHP(:,Cu_sh,S_sh),da.E_b(:),da.E_i(:,S_sh)])
 legend('Imbalance','CHP energy supply unit 1','Bidding','Total imbalance reduction');
 title(['Energy unit ',num2str(Cu_sh),' for scenario ',num2str(S_sh)]);
 xlabel('Time [h]');
 ylabel('Energy [kWh]');
 
 figure(9)
-plot(time_q,[E_i0.val*Pi_s.val,permute(sum(E_CHP,2),[1 3 2])*Pi_s.val,E_b(:),E_i*Pi_s.val])
+plot(time_q,[imbal_s*Pi_st,permute(sum(da.E_CHP,2),[1 3 2])*Pi_st,da.E_b(:),da.E_i*Pi_st])
 legend('Imbalance','CHP energy supply','Bidding','Imbalance reduction');
 title(['Energy for scenario ',num2str(S_sh)]);
 xlabel('Time [h]');
 ylabel('Energy [kWh]');
 
 figure(10)
-plot(time_q,[FC_bc,R_b,R_ir,profit]);
+plot(time_q,[da.FC_bc,da.R_b,da.R_ir,profit]);
 legend('Fuel consumption cost','Bidding revenue','Imbalance reduction revenue','profit');
 title('Total profit');
 xlabel('Time [h]');
