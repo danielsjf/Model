@@ -194,6 +194,29 @@ title(['Heat-load duration diagram for unit ',num2str(Cu_sh)]);
 xlabel('Load duration [h]');
 ylabel('Thermal load [MW_t]');
 
+% Scenarios (s)
+%--------------
+
+% Actual production
+actuals_y = TSwind.production; % Production for a 1MW wind turbine
+actuals_s = actuals_y(sample_i); % Production for a 1MW wind turbine during the sample time
+
+% Imbalance prices (relation to error)
+price_actual_y = zeros(size(actuals_y));
+tempPOS = POS;
+tempNEG = -NEG;
+
+price_actual_y(actuals_y>=0) = tempPOS(actuals_y>=0);
+price_actual_y(actuals_y<0) = tempNEG(actuals_y<0);
+
+price_actual_s = price_actual_y(sample_i,:);
+
+price_posActual_y = POS; % [€/MWh] imbalance electricity price during the year
+price_posActual_s = price_posActual_y(sample_i); % [€/MWh] imbalance electricity price during the sample duration
+
+price_negActual_y = NEG; % [€/MWh] imbalance electricity price during the year
+price_negActual_s = price_negActual_y(sample_i); % [€/MWh] imbalance electricity price during the sample duration
+
 % Price
 %------
 
@@ -451,7 +474,7 @@ Cust = N; % Custopt;
 BUYst.val=[ones(1,Cust) zeros(1,N-Cust)];
     wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,dt);
 
-    gams('CHP');%LOCAL PRICE IS TAKEN INTO ACCOUNT 
+    gams('CHP'); % Day-ahead optimisation
     
     rs.name = 'obj';
     r = rgdx ('results', rs);
@@ -495,7 +518,7 @@ disp('Calculating actuals...')
 
 i.uels = {{1:sample_q}};             
 n.uels = {{1:N}};             
-s.uels = {{1:S}};             
+s.uels = {{1}};             
 
 
 %Input parameters
@@ -503,14 +526,14 @@ s.uels = {{1:S}};
 
 [i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,...
     Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,dt] = GAMSWRITE(sample_q,N,...
-    S,price_elecS_s,price_elecC_s,price_imbal_s,price_gas_s,imbal_s,...
+    S,price_elecS_s,price_elecC_s,price_actual_s,price_gas_s,actuals_s,...
     heatD_s,Nb0,Ns0,Ae0,Aq0,Pi_st,Ecap_loVar,Ecap_upVar,Qcap_upVar,...
     tank_cap,da.E_b(1),1,quarters);
 
 BUYst.val=[ones(1,Cust) zeros(1,N-Cust)];
     wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,dt);
 
-    gams('CHP');%LOCAL PRICE IS TAKEN INTO ACCOUNT 
+    gams('CHP'); % Calculate actuals
 
 [a.obj,a.R_b,a.R_ir,a.FC_bc,a.m_fCHP,a.m_fB,a.Q_CHP,a.Q_B,a.DeltaQ_S,a.Q_S,a.E_CHP,a.E_i,a.E_b,a.ON] = GAMSREAD(time_i,sample_q,N,S,sample_i);
 
