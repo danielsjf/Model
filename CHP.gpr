@@ -1,16 +1,25 @@
 [PROJECT]
 
+[SOLVERS]
+LP=CPLEX
+MIP=CPLEX
+MIQCP=CPLEX
+QCP=CPLEX
+RMIP=CPLEX
+RMIQCP=CPLEX
+
 [RP:CHP]
 1=
 
 [MRUFILES]
-1=C:\Users\Jef Daniels\Dropbox\Thesis 2013\Model\Real\Model\CHP.lst
+1=C:\Users\Jef\Dropbox\Thesis 2013\Model\Real\Model\CHP.lst
+2=C:\Users\Jef Daniels\Dropbox\Thesis 2013\Model\Real\Model\CHP.lst
 
 [OPENWINDOW_1]
-FILE0=C:\Users\Jef Daniels\Dropbox\Thesis 2013\Model\Real\Model\CHP.gms
-FILE1=C:\Users\Jef Daniels\Dropbox\Thesis 2013\Model\Real\Model\CHP.gms
+FILE0=C:\Users\Jef\Dropbox\Thesis 2013\Model\Real\Model\CHP.gms
+FILE1=C:\Users\Jef\Dropbox\Thesis 2013\Model\Real\Model\CHP.gms
 MAXIM=0
-TOP=-1
-LEFT=96
+TOP=63
+LEFT=85
 HEIGHT=572
 WIDTH=1062

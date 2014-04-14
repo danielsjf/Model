@@ -90,7 +90,7 @@ S_sh = 3; % shown scenario
 % Input time (i)
 %---------------
 
-week = 3; % week of the year
+week = 4; % week of the year
 sample_d = 2; % [days] sample duration
 
 % Input units (n)
@@ -197,8 +197,8 @@ ylabel('Thermal load [MW_t]');
 % Scenarios (s)
 %--------------
 
-% Actual production
-actuals_y = TSwind.production; % Production for a 1MW wind turbine
+% Actual production error
+actuals_y = TSwind.production -  TSwind.forecast; % Production for a 1MW wind turbine
 actuals_s = actuals_y(sample_i); % Production for a 1MW wind turbine during the sample time
 
 % Imbalance prices (relation to error)
@@ -216,6 +216,10 @@ price_posActual_s = price_posActual_y(sample_i); % [€/MWh] imbalance electricity
 
 price_negActual_y = NEG; % [€/MWh] imbalance electricity price during the year
 price_negActual_s = price_negActual_y(sample_i); % [€/MWh] imbalance electricity price during the sample duration
+
+Pi_actual = 1; % The probability of the actual scenario
+
+CHPBool = 1; % Take the CHP into account (1 is yes, 0 is no)
 
 % Price
 %------
@@ -405,10 +409,10 @@ disp('  * Imbalance prices')
 disp('Preparing for day-ahead optimisation...')
 
 [i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,...
-    Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,dt] = GAMSWRITE(sample_q,N,...
+    Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,CHP_bool,dt] = GAMSWRITE(sample_q,N,...
     S,price_elecS_s,price_elecC_s,price_imbal_s,price_gas_s,imbal_s,...
     heatD_s,Nb0,Ns0,Ae0,Aq0,Pi_st,Ecap_loVar,Ecap_upVar,Qcap_upVar,...
-    tank_cap,0,0,quarters);
+    tank_cap,0,0,CHPBool,quarters);
 
 %% CALL GAMS 
 %-----------------------------------
@@ -472,14 +476,9 @@ down = 1;
 Cust = N; % Custopt;
 
 BUYst.val=[ones(1,Cust) zeros(1,N-Cust)];
-    wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,dt);
+    wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,CHP_bool,dt);
 
     gams('CHP'); % Day-ahead optimisation
-    
-    rs.name = 'obj';
-    r = rgdx ('results', rs);
-    obj=r.val(:,1);
-    o1 = obj/Cust;
 
 %% RESULTS 
 %-----------------------------------
@@ -489,6 +488,7 @@ BUYst.val=[ones(1,Cust) zeros(1,N-Cust)];
 
 disp('Loading results day-ahead optimisation...')
 
+da.name = 'day-ahead optimisation';
 [da.obj,da.R_b,da.R_ir,da.FC_bc,da.m_fCHP,da.m_fB,da.Q_CHP,da.Q_B,da.DeltaQ_S,da.Q_S,da.E_CHP,da.E_i,da.E_b,da.ON] = GAMSREAD(time_i,sample_q,N,S,sample_i);
 
 %-----------------------------------
@@ -513,29 +513,52 @@ profit_t = sum(profit,1); % [€] total profit
 
 disp('Calculating actuals...')
 
-%Input sets
-%----------
+% Input actuals
+%--------------
+
+S = 1;
+
+% Input sets
+%-----------
 
 i.uels = {{1:sample_q}};             
 n.uels = {{1:N}};             
-s.uels = {{1}};             
+s.uels{1,1} = 1:S;             
 
 
-%Input parameters
-%----------------
+% Input parameters
+%-----------------
 
+% Actuals (with CHP)
 [i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,...
-    Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,dt] = GAMSWRITE(sample_q,N,...
+    Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,CHP_bool,dt] = GAMSWRITE(sample_q,N,...
     S,price_elecS_s,price_elecC_s,price_actual_s,price_gas_s,actuals_s,...
-    heatD_s,Nb0,Ns0,Ae0,Aq0,Pi_st,Ecap_loVar,Ecap_upVar,Qcap_upVar,...
-    tank_cap,da.E_b(1),1,quarters);
+    heatD_s,Nb0,Ns0,Ae0,Aq0,Pi_actual,Ecap_loVar,Ecap_upVar,Qcap_upVar,...
+    tank_cap,da.E_b(1),1,CHPBool,quarters);
 
 BUYst.val=[ones(1,Cust) zeros(1,N-Cust)];
-    wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,dt);
+    wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,CHP_bool,dt);
 
     gams('CHP'); % Calculate actuals
 
+a.name = 'actuals';
 [a.obj,a.R_b,a.R_ir,a.FC_bc,a.m_fCHP,a.m_fB,a.Q_CHP,a.Q_B,a.DeltaQ_S,a.Q_S,a.E_CHP,a.E_i,a.E_b,a.ON] = GAMSREAD(time_i,sample_q,N,S,sample_i);
+
+% Actuals (without CHP)
+CHPBool = 0;
+[i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,...
+    Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,CHP_bool,dt] = GAMSWRITE(sample_q,N,...
+    S,price_elecS_s,price_elecC_s,price_actual_s,price_gas_s,actuals_s,...
+    heatD_s,Nb0,Ns0,Ae0,Aq0,Pi_actual,Ecap_loVar,Ecap_upVar,Qcap_upVar,...
+    tank_cap,0,0,CHPBool,quarters);
+
+BUYst.val=[ones(1,Cust) zeros(1,N-Cust)];
+    wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,CHP_bool,dt);
+
+    gams('CHP'); % Calculate actuals
+
+a_NCHP.name = 'actuals (setup without CHP)';
+[a_NCHP.obj,a_NCHP.R_b,a_NCHP.R_ir,a_NCHP.FC_bc,a_NCHP.m_fCHP,a_NCHP.m_fB,a_NCHP.Q_CHP,a_NCHP.Q_B,a_NCHP.DeltaQ_S,a_NCHP.Q_S,a_NCHP.E_CHP,a_NCHP.E_i,a_NCHP.E_b,a_NCHP.ON] = GAMSREAD(time_i,sample_q,N,S,sample_i);
 
 %-----------------------------------
 %COMPARE WITH ACTUALS
@@ -545,6 +568,21 @@ BUYst.val=[ones(1,Cust) zeros(1,N-Cust)];
 disp('Comparing actuals with day-ahead optimisation...')
 
 % TODO
+% Compare profit, storage use, boiler use, CHP use (on/off time, on/off
+% cycles) for the following scenarios:
+[GEN, CHP_data] = STATSSCEN(a,1,1); % Actual scenario
+%DRAWFIG(a,time_q,actuals_s,heatD_s,Pi_actual);
+% [caseB.profit,caseB.profit_t] = STATSSCEN(); % Best case scenario
+% Best case scenario
+
+
+% Average scenario
+
+% Worse case scenario
+
+% No CHP scenario
+[GEN, CHP_data] = STATSSCEN(a_NCHP,1,1);
+
 
 %% Figures
 %-----------------------------------
@@ -554,91 +592,7 @@ disp('Comparing actuals with day-ahead optimisation...')
 
 disp('Drawing figures...')
 
-figure(2)
-plot(time_q,[imbal_s(:,S_sh), da.E_b, da.E_i(:,S_sh)])
-title(['Imbalance for scenario ',num2str(S_sh)]);
-legend('Wind imbalance','Bidding','Imbalance reduction');
-
-figure(3)
-subplot(2,1,1)
-plot(time_q,da.Q_S(:,:,S_sh))
-title(['Storage for scenario ',num2str(S_sh), ' (all units)']);
-subplot(2,1,2)
-plot(time_q,da.DeltaQ_S(:,:,S_sh))
-title(['Storage heat supply for scenario ',num2str(S_sh), ' (all units)']);
-
-figure(4)
-plot(time_q,[da.Q_S(:,Cu_sh,S_sh),da.DeltaQ_S(:,Cu_sh,S_sh)]);
-legend('Storage','Storage heat supply');
-title(['Storage unit ',num2str(Cu_sh),' for scenario ',num2str(S_sh)]);
-xlabel('Time [h]');
-ylabel('Heat [kWh]');
-
-figure(5)
-subplot(2,1,1)
-plot(time_q,da.E_CHP(:,:,S_sh))
-title(['CHP energy supply for scenario ',num2str(S_sh)]);
-xlabel('Time [h]');
-ylabel('Energy [kWh]');
-subplot(2,1,2)
-plot(time_q,da.Q_CHP(:,:,S_sh))
-title(['CHP heat supply for scenario ',num2str(S_sh)]);
-xlabel('Time [h]');
-ylabel('Heat [kWh]');
-
-figure(6)
-plot(time_q,[heatD_s(:,Cu_sh),da.Q_B(:,Cu_sh,S_sh),da.Q_CHP(:,Cu_sh,S_sh)])
-legend('House heat demand','Boiler heat supply','CHP heat supply');
-title(['Heating unit ',num2str(Cu_sh),' for scenario ',num2str(S_sh)]);
-xlabel('Time [h]');
-ylabel('Heat [kWh]');
-
-figure(7)
-plot(time_q,[sum(da.m_fB(:,:,S_sh),2),sum(da.m_fCHP(:,:,S_sh),2)])
-legend('Total fuelflow Boilers','Total fuelflow CHPs');
-title(['Total fuelflow for scenario ',num2str(S_sh)]);
-xlabel('Time [h]');
-ylabel('Fuelflow [kWh]');
-
-figure(8)
-plot(time_q,[imbal_s(:,S_sh),da.E_CHP(:,Cu_sh,S_sh),da.E_b(:),da.E_i(:,S_sh)])
-legend('Imbalance','CHP energy supply unit 1','Bidding','Total imbalance reduction');
-title(['Energy unit ',num2str(Cu_sh),' for scenario ',num2str(S_sh)]);
-xlabel('Time [h]');
-ylabel('Energy [kWh]');
-
-figure(9)
-plot(time_q,[imbal_s*Pi_st,permute(sum(da.E_CHP,2),[1 3 2])*Pi_st,da.E_b(:),da.E_i*Pi_st])
-legend('Imbalance','CHP energy supply','Bidding','Imbalance reduction');
-title(['Energy for scenario ',num2str(S_sh)]);
-xlabel('Time [h]');
-ylabel('Energy [kWh]');
-
-figure(10)
-plot(time_q,[da.FC_bc,da.R_b,da.R_ir,profit]);
-legend('Fuel consumption cost','Bidding revenue','Imbalance reduction revenue','profit');
-title('Total profit');
-xlabel('Time [h]');
-ylabel('Money [€]');
-
-% figure(1)
-% subplot(2,1,1);
-% plot(i,d1,'c')
-% hold on 
-% plot(i,CHP_thermal1,'r')
-% hold on 
-% plot(i,boiler1,'g')
-% hold on
-% plot(i,charge1)
-% xlabel('Time [h]')
-% legend('House heat demand', 'CHP heat supply', 'Boiler heat supply', 'Storage heat supply')
-
-% subplot(2,1,2);
-% plot(i,-charge1)
-% hold on 
-% plot(i,qst1,'k--')
-% xlabel('Time [h]')
-% legend('Heatflow to storage', 'Storage')
+DRAWFIG(da,time_q,imbal_s,heatD_s,Pi_st,Cu_sh,S_sh);
 
 %% Data
 %-----------------------------------

@@ -1,8 +1,8 @@
 function [i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,...
-    Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,dt] = GAMSWRITE(sample_q,N,...
+    Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,CHP_bool,dt] = GAMSWRITE(sample_q,N,...
     S,price_elecS_s,price_elecC_s,price_imbal_s,price_gas_s,imbal_s,...
     heatD_s,Nb0,Ns0,Ae0,Aq0,Pi_st,Ecap_loVar,Ecap_upVar,Qcap_upVar,...
-    tank_cap,E_b,E_bBool,quarters)
+    tank_cap,E_b,E_bBool,CHPBool,quarters)
 %Input sets
 %----------
 
@@ -134,15 +134,20 @@ Cs.form = 'full';
 Cs.type = 'parameter';
 Cs.dim =1;
 
-bid.name='bid'; %delta t for the storage time period analyzed 0.25for 15 min
+bid.name='bid'; % Bid on the day-ahead market
 bid.val=E_b;
 bid.type = 'parameter';
 bid.dim=0;
 
-bid_bool.name='bid_bool'; %delta t for the storage time period analyzed 0.25for 15 min
+bid_bool.name='bid_bool'; % Take the day-ahead bid into account in the optimalisation (1 is yes, 0 is no)
 bid_bool.val=E_bBool;
 bid_bool.type = 'parameter';
 bid_bool.dim=0;
+
+CHP_bool.name='CHP_bool'; % Take the CHP into account in the optimalisation (1 if CHP on, 0 if CHP off)
+CHP_bool.val=CHPBool;
+CHP_bool.type = 'parameter';
+CHP_bool.dim=0;
 
 dt.name='dt'; %delta t for the storage time period analyzed 0.25for 15 min
 dt.val=1/quarters;

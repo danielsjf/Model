@@ -1,67 +1,37 @@
 B 2 C o m p i l a t i o n
-B 260 Include File Summary
-B 274 Equation Listing    SOLVE qp1 Using MIP From line 167
-D 275 Investment
-D 466 Revenue_bidding
-D 479 Revenue_imbalance_red
-D 524 Cost_extra_fuel
-D 537 Fuelcost_only_boiler
-D 558 Fuelcost_boiler_chp
-D 1051 Heat_demand
-D 1068 Grid
-D 1089 Storage
-D 1110 CHP_E
-D 1123 CHP_Q
-D 1136 Boiler
-D 1149 Shutdown1
-D 1170 Shutdown2
-B 1193 Column Listing      SOLVE qp1 Using MIP From line 167
-E 1194 obj
-E 1202 m_fCHP
-E 1230 m_fB
-E 1254 Q_CHP
-E 1278 Q_B
-E 1302 Q_S
-E 1326 DeltaQ_S
-E 1350 R_b
-E 1374 R_ir
-E 1398 C_ef
-E 1422 FC_b
-E 1442 FC_bc
-E 1466 E_CHP
-E 1498 E_i
-E 1521 E_b
-E 3639 ON
-B 3665 Model Statistics    SOLVE qp1 Using MIP From line 167
-B 3681 Solution Report     SOLVE qp1 Using MIP From line 167
-F 3720 Investment
-F 3726 Revenue_bidding
-F 3923 Revenue_imbalance_red
-F 4120 Cost_extra_fuel
-F 4317 Fuelcost_only_boiler
-F 4514 Fuelcost_boiler_chp
-F 4711 Heat_demand
-F 16236 Grid
-F 18161 Storage
-F 29686 CHP_E
-F 41211 CHP_Q
-F 52736 Boiler
-F 64261 Shutdown1
-F 75786 Shutdown2
-G 87306 obj
-G 87312 m_fCHP
-G 98837 m_fB
-G 110362 Q_CHP
-G 121887 Q_B
-G 133412 Q_S
-G 144937 DeltaQ_S
-G 156462 R_b
-G 156659 R_ir
-G 156856 C_ef
-G 157053 FC_b
-G 157250 FC_bc
-G 157447 E_CHP
-G 168972 E_i
-G 170897 E_b
-G 170903 ON
-B 182435 E x e c u t i o n
+B 263 Include File Summary
+B 277 Equation Listing    SOLVE qp1 Using MIP From line 169
+D 278 Investment
+D 469 Revenue_bidding
+D 490 Revenue_imbalance_red
+D 503 Cost_extra_fuel
+D 516 Fuelcost_only_boiler
+D 537 Fuelcost_boiler_chp
+D 582 Heat_demand
+D 599 Grid
+D 628 Storage
+D 649 CHP_E
+D 662 CHP_Q
+D 675 Boiler
+D 688 Shutdown1
+D 707 Shutdown2
+B 728 Column Listing      SOLVE qp1 Using MIP From line 169
+E 729 obj
+E 737 m_fCHP
+E 765 m_fB
+E 789 Q_CHP
+E 813 Q_B
+E 837 Q_S
+E 861 DeltaQ_S
+E 885 R_b
+E 909 R_ir
+E 933 C_ef
+E 957 FC_b
+E 977 FC_bc
+E 1001 E_CHP
+E 1033 E_i
+E 1057 E_b
+E 1448 ON
+B 1474 Model Statistics    SOLVE qp1 Using MIP From line 169
+B 1490 Solution Report     SOLVE qp1 Using MIP From line 169
+B 1519 E x e c u t i o n
