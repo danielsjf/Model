@@ -12,12 +12,12 @@ RMIQCP=CPLEX
 1=
 
 [MRUFILES]
-1=C:\Users\Jef\Dropbox\Thesis 2013\Model\Real\Model\CHP.lst
-2=C:\Users\Jef Daniels\Dropbox\Thesis 2013\Model\Real\Model\CHP.lst
+1=C:\Users\Jef Daniels\Dropbox\Thesis 2013\Model\Real\Model\CHP.lst
 
 [OPENWINDOW_1]
 FILE0=C:\Users\Jef\Dropbox\Thesis 2013\Model\Real\Model\CHP.gms
-FILE1=C:\Users\Jef\Dropbox\Thesis 2013\Model\Real\Model\CHP.gms
+FILE1=C:\Users\Jef\Dropbox\Thesis 2013\Model\Real\Model\CHP.lst
+FILE2=C:\Users\Jef\Dropbox\Thesis 2013\Model\Real\Model\CHP.gms
 MAXIM=0
 TOP=63
 LEFT=85

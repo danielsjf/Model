@@ -213,3 +213,19 @@ pip-log.txt
 
 #Mr Developer
 .mr.developer.cfg
+
+#############
+## GAMS
+#############
+
+*.lst
+*.gdx
+*.log
+*.lxi
+*.`gm
+
+#############
+## Matlab
+#############
+
+*.asv

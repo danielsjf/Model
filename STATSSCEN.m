@@ -9,6 +9,9 @@ if S > size(RES.E_CHP,3)
     S = 1;
 end
 
+% Compare profit, storage use, boiler use, CHP use (on/off time, on/off
+% cycles) for the following scenarios:
+
 if dib == 1, disp(['Data for the ',RES.name]); end
 if dib == 1, disp('  '); end
 

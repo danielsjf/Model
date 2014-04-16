@@ -529,7 +529,22 @@ s.uels{1,1} = 1:S;
 % Input parameters
 %-----------------
 
-% Actuals (with CHP)
+% Actuals (with CHP; optimal)
+[i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,...
+    Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,CHP_bool,dt] = GAMSWRITE(sample_q,N,...
+    S,price_elecS_s,price_elecC_s,price_actual_s,price_gas_s,actuals_s,...
+    heatD_s,Nb0,Ns0,Ae0,Aq0,Pi_actual,Ecap_loVar,Ecap_upVar,Qcap_upVar,...
+    tank_cap,0,0,CHPBool,quarters);
+
+BUYst.val=[ones(1,Cust) zeros(1,N-Cust)];
+    wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,CHP_bool,dt);
+
+    gams('CHP'); % Calculate actuals
+
+a_OPT.name = 'actuals (with CHP; optimal)';
+[a_OPT.obj,a_OPT.R_b,a_OPT.R_ir,a_OPT.FC_bc,a_OPT.m_fCHP,a_OPT.m_fB,a_OPT.Q_CHP,a_OPT.Q_B,a_OPT.DeltaQ_S,a_OPTa.Q_S,a_OPT.E_CHP,a_OPT.E_i,a_OPT.E_b,a_OPT.ON] = GAMSREAD(time_i,sample_q,N,S,sample_i);
+
+% Actuals (with CHP; day-ahead bidding)
 [i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,...
     Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,CHP_bool,dt] = GAMSWRITE(sample_q,N,...
     S,price_elecS_s,price_elecC_s,price_actual_s,price_gas_s,actuals_s,...
@@ -541,10 +556,10 @@ BUYst.val=[ones(1,Cust) zeros(1,N-Cust)];
 
     gams('CHP'); % Calculate actuals
 
-a.name = 'actuals';
+a.name = 'actuals (with CHP; day-ahead bidding)';
 [a.obj,a.R_b,a.R_ir,a.FC_bc,a.m_fCHP,a.m_fB,a.Q_CHP,a.Q_B,a.DeltaQ_S,a.Q_S,a.E_CHP,a.E_i,a.E_b,a.ON] = GAMSREAD(time_i,sample_q,N,S,sample_i);
 
-% Actuals (without CHP)
+% Actuals (without CHP; day-ahead bidding/optimal)
 CHPBool = 0;
 [i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,...
     Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,CHP_bool,dt] = GAMSWRITE(sample_q,N,...
@@ -557,7 +572,7 @@ BUYst.val=[ones(1,Cust) zeros(1,N-Cust)];
 
     gams('CHP'); % Calculate actuals
 
-a_NCHP.name = 'actuals (setup without CHP)';
+a_NCHP.name = 'actuals (without CHP; day-ahead bidding/optimal)';
 [a_NCHP.obj,a_NCHP.R_b,a_NCHP.R_ir,a_NCHP.FC_bc,a_NCHP.m_fCHP,a_NCHP.m_fB,a_NCHP.Q_CHP,a_NCHP.Q_B,a_NCHP.DeltaQ_S,a_NCHP.Q_S,a_NCHP.E_CHP,a_NCHP.E_i,a_NCHP.E_b,a_NCHP.ON] = GAMSREAD(time_i,sample_q,N,S,sample_i);
 
 %-----------------------------------
@@ -567,20 +582,13 @@ a_NCHP.name = 'actuals (setup without CHP)';
 
 disp('Comparing actuals with day-ahead optimisation...')
 
-% TODO
-% Compare profit, storage use, boiler use, CHP use (on/off time, on/off
-% cycles) for the following scenarios:
-[GEN, CHP_data] = STATSSCEN(a,1,1); % Actual scenario
-%DRAWFIG(a,time_q,actuals_s,heatD_s,Pi_actual);
-% [caseB.profit,caseB.profit_t] = STATSSCEN(); % Best case scenario
-% Best case scenario
+% Actuals (with CHP; optimal)
+[GEN, CHP_data] = STATSSCEN(a_OPT,1,1);
 
+% Actuals (with CHP; day-ahead bidding)
+[GEN, CHP_data] = STATSSCEN(a,1,1); 
 
-% Average scenario
-
-% Worse case scenario
-
-% No CHP scenario
+% Actuals (without CHP; day-ahead bidding/optimal)
 [GEN, CHP_data] = STATSSCEN(a_NCHP,1,1);
 
 
@@ -592,7 +600,7 @@ disp('Comparing actuals with day-ahead optimisation...')
 
 disp('Drawing figures...')
 
-DRAWFIG(da,time_q,imbal_s,heatD_s,Pi_st,Cu_sh,S_sh);
+%DRAWFIG(da,time_q,imbal_s,heatD_s,Pi_st,Cu_sh,S_sh);
 
 %% Data
 %-----------------------------------
