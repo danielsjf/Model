@@ -39,8 +39,9 @@ parameters
      Qcap_up(n)   maximal thermal energy supply boiler
 
      Cs(n)        storage tank capacity
-     bid          bid on the day-ahead market
+     bid(i)       bid on the day-ahead market
      bid_bool     bid done on the market (0 is false and 1 is true)
+     bid_single   single bid for the whole day (0 is multiple and 1 is single)
      CHP_bool     CHP on-off (0 is off and 1 is on)
      BUYst(n)     startvalue CHP's;
 
@@ -50,7 +51,7 @@ Scalar
 
 
 $gdxin inputs
-$load i n s P_g P_c P_i P_n P_st E_i0 E_i1 Q_H Nb Ns Ae Aq Pi_s Ecap_lo Ecap_up Qcap_up Cs bid bid_bool CHP_bool dt
+$load i n s P_g P_c P_i P_n P_st E_i0 E_i1 Q_H Nb Ns Ae Aq Pi_s Ecap_lo Ecap_up Qcap_up Cs bid bid_bool bid_single CHP_bool dt
 $gdxin
 
 *$if exist matdata.gms  $include matdata.gms
@@ -76,7 +77,7 @@ variables
 
      E_CHP(i,n,s)      electricity supply CHP
      E_i(i,s)          imbalance reduction
-     E_b               electricity demand bidding
+     E_b(i)            electricity demand bidding
 
      ON(i,n,s)         Turn CHP on
      BUY(n)            Invest in CHP;
@@ -97,11 +98,12 @@ positive variables m_fCHP(i,n,s),m_fB(i,n,s),E_CHP(i,n,s),Q_CHP(i,n,s),Q_B(i,n,s
      Q_CHP.up(i,n,s) = Ecap_up(n)/Ae(n)*Aq(n);
      Q_B.up(i,n,s)= Qcap_up(n);
 
-     E_b.up = sum(n, Ecap_up(n));
-     Q_S.fx('192',n,s)= 0;
+     E_b.up(i) = sum(n, Ecap_up(n));
+*     Q_S.fx('192',n,s)= 0;
      Q_S.up(i,n,s)= Cs(n);
 
-     E_b.fx$(bid_bool) = bid;
+     E_b.fx(i)$(bid_bool) = bid(i);
+     E_b.fx(i)$(not CHP_bool) = 0;
      m_fCHP.fx(i,n,s)$(not CHP_bool) = 0
 
 
@@ -119,12 +121,12 @@ binary variable ON(i,n,s),BUY(n);
 
 
 
-equation Investment,Revenue_bidding,Revenue_imbalance_red,Cost_extra_fuel,Fuelcost_only_boiler,Fuelcost_boiler_chp,Heat_demand(i,n,s),Grid(i,s),Storage(i,n,s),CHP_E(i,n,s),CHP_Q(i,n,s),Boiler(i,n,s),Shutdown1(i,n,s),Shutdown2(i,n,s);
+equation Investment,Revenue_bidding,Revenue_imbalance_red,Cost_extra_fuel,Fuelcost_only_boiler,Fuelcost_boiler_chp,Heat_demand(i,n,s),Grid(i,s),Bidding(i),Storage(i,n,s),CHP_E(i,n,s),CHP_Q(i,n,s),Boiler(i,n,s),Shutdown1(i,n,s),Shutdown2(i,n,s);
 *, start_shut1,min_up1,Dispatch(i);
 
    Investment..                obj =e= sum(i, R_b(i) + R_ir(i) - C_ef(i));
 
-   Revenue_bidding(i)..        R_b(i) =e= E_b*P_g(i);
+   Revenue_bidding(i)..        R_b(i) =e= E_b(i)*P_g(i);
 
    Revenue_imbalance_red(i)..  R_ir(i) =e= sum(s, -Pi_s(s)*E_i1(i,s)*E_i(i,s)*P_i(i,s));
 
@@ -137,7 +139,9 @@ equation Investment,Revenue_bidding,Revenue_imbalance_red,Cost_extra_fuel,Fuelco
 
    Heat_demand(i,n,s)..        Q_H(i,n) =e= DeltaQ_S(i,n,s) + Q_B(i,n,s) + Q_CHP(i,n,s);
 
-   Grid(i,s)..                 sum(n, E_CHP(i,n,s)) =e= E_i(i,s) + E_b;
+   Grid(i,s)..                 sum(n, E_CHP(i,n,s)) =e= E_i(i,s) + E_b(i);
+
+   Bidding(i)..                E_b(i)$(bid_single) =e= E_b(i--1)$(bid_single);
 
    Storage(i,n,s)..            Q_S(i,n,s) =e= Q_S(i--1,n,s)*Ns(n) - DeltaQ_S(i,n,s);
 
@@ -192,7 +196,7 @@ E_CHP.l(i,n,s)$(not E_CHP.l(i,n,s)) = eps;
 
 E_i.l(i,s)$(not E_i.l(i,s)) = eps;
 
-E_b.l$(not E_b.l) = eps;
+E_b.l(i)$(not E_b.l(i)) = eps;
 
 
 

@@ -1,8 +1,8 @@
 function [i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,...
-    Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,CHP_bool,dt] = GAMSWRITE(sample_q,N,...
+    Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,bid_single,CHP_bool,dt] = GAMSWRITE(sample_q,N,...
     S,price_elecS_s,price_elecC_s,price_imbal_s,price_gas_s,imbal_s,...
     heatD_s,Nb0,Ns0,Ae0,Aq0,Pi_st,Ecap_loVar,Ecap_upVar,Qcap_upVar,...
-    tank_cap,E_b,E_bBool,CHPBool,quarters)
+    tank_cap,E_b,E_bBool,E_bSingle,CHPBool,quarters)
 %Input sets
 %----------
 
@@ -136,13 +136,19 @@ Cs.dim =1;
 
 bid.name='bid'; % Bid on the day-ahead market
 bid.val=E_b;
+bid.form = 'full';
 bid.type = 'parameter';
-bid.dim=0;
+bid.dim=1;
 
 bid_bool.name='bid_bool'; % Take the day-ahead bid into account in the optimalisation (1 is yes, 0 is no)
 bid_bool.val=E_bBool;
 bid_bool.type = 'parameter';
 bid_bool.dim=0;
+
+bid_single.name='bid_single'; % Take the day-ahead bid into account in the optimalisation (1 is yes, 0 is no)
+bid_single.val=E_bSingle;
+bid_single.type = 'parameter';
+bid_single.dim=0;
 
 CHP_bool.name='CHP_bool'; % Take the CHP into account in the optimalisation (1 if CHP on, 0 if CHP off)
 CHP_bool.val=CHPBool;

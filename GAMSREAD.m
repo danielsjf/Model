@@ -100,7 +100,7 @@ end
 % Bidding price
 rs.name = 'E_b';
 r = rgdx ('results', rs);
-E_b=r.val*ones(size(sample_i')); % Array to make it easier for plotting
+E_b(time_i,1)=r.val(time_i,2);
 
 rs.name = 'ON';
 r = rgdx ('results', rs);

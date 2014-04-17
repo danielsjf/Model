@@ -102,10 +102,11 @@ for k = 1:N
             CHP.downtimesA(k) = CHP.downtimes(1,k);
         end
     else
-        CHP.uptimes(1:round(numel(temp2)/2)+(CHPbin(1,k)~=1),k) = temp2(1+(CHPbin(1,k)==-1):2:numel(temp2))/4; % [hours] Distances between local extrema (uptime)
+        i = floor(numel(temp2)/2);
+        CHP.uptimes(1:floor(numel(temp2)/2)+(CHPbin(1,k)==1&&numel(temp2)/2~=i),k) = temp2(1+(CHPbin(1,k)==-1):2:numel(temp2))/4; % [hours] Distances between local extrema (uptime)
         CHP.uptimesM(k) = max(CHP.uptimes(:,k)); % [hours] Largest distance between local extrema (uptime)
         CHP.uptimesA(k) = mean(CHP.uptimes(CHP.uptimes(:,k)>0)); % [hours] Average distance between local extrema (uptime)
-        CHP.downtimes(1:round(numel(temp2)/2)+(CHPbin(1,k)~=1),k) = temp2(1+(CHPbin(1,k)==1):2:numel(temp2))/4; % [hours] Distances between local extrema (downtime)
+        CHP.downtimes(1:floor(numel(temp2)/2)+(CHPbin(1,k)==-1&&numel(temp2)/2~=i),k) = temp2(1+(CHPbin(1,k)==1):2:numel(temp2))/4; % [hours] Distances between local extrema (downtime)
         CHP.downtimesM(k) = max(CHP.downtimes(:,k)); % [hours] Largest distance between local extrema (downtime)
         CHP.downtimesA(k) = mean(CHP.downtimes(CHP.downtimes(:,k)>0)); % [hours] Average distance between local extrema (downtime)
     end
