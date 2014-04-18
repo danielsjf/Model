@@ -2,6 +2,7 @@ clear all
 close all
 clc
 path(path,'C:\GAMS\win64\24.2')
+path(path,[pwd filesep 'DataHash'])
 clear gamso;
  
 %% General information
@@ -93,7 +94,7 @@ Par.Ns0 = 0.998; % Storage heat efficiency
 Cu_sh = 2; % shown chp
 S_sh = 3; % shown scenario
 
-RunAgain = 0; % 0 is no run as the parameters already were used in the past, 1 is a run as the parameters are already used
+RunAgain = 1; % 0 is no run as the parameters already were used in the past, 1 is a run as the parameters are already used
 
 Par.E_bSingle = 0; % 1 is single bid for the whole period, 0 is one bid per quarter
 
@@ -111,8 +112,8 @@ Par.N = 6; N = Par.N; % number of units (CHP's, houses, etc.)
 % Input scenarios (s)
 %--------------------
 
-Par.S_gen = 40; % number of generated scenarios
-Par.S_red = 3; % number of reduced scenarios
+Par.S_gen = 70; % number of generated scenarios
+Par.S_red = 7; % number of reduced scenarios
 S = Par.S_red; % number of scenarios
 
 % Hash

@@ -39,7 +39,7 @@ parameters
      Qcap_up(n)   maximal thermal energy supply boiler
 
      Cs(n)        storage tank capacity
-     bid          bid on the day-ahead market
+     bid(i)       bid on the day-ahead market
      bid_bool     bid done on the market (0 is false and 1 is true)
      bid_single   single bid for the whole day (0 is multiple and 1 is single)
      CHP_bool     CHP on-off (0 is off and 1 is on)
@@ -102,7 +102,7 @@ positive variables m_fCHP(i,n,s),m_fB(i,n,s),E_CHP(i,n,s),Q_CHP(i,n,s),Q_B(i,n,s
 *     Q_S.fx('192',n,s)= 0;
      Q_S.up(i,n,s)= Cs(n);
 
-     E_b.fx(i)$(bid_bool) = bid;
+     E_b.fx(i)$(bid_bool) = bid(i);
      E_b.fx(i)$(not CHP_bool) = 0;
      m_fCHP.fx(i,n,s)$(not CHP_bool) = 0
 

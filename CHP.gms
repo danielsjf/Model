@@ -170,6 +170,7 @@ model qp1 /all /;
 *qp1.Workspace = 30;
 *qp1.optfile=1;
 qp1.optcr=0.00001;
+qp1.threads=-1;
 option MIP=cplex;
 *option MIP=gurobi;
 solve qp1 using mip maximizing obj;
