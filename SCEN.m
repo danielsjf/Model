@@ -5,7 +5,7 @@ function [scen_lim,scen_red] = SCEN(n_scen_gen,MU,eps_init,coef_fit_var,norm_var
     disp('    Scenario generation...')
 
     % Generating histogram (without the function)
-    forecast_pb = zeros(samples_scenario,1); % bin in which each forecast belongs
+    forecast_pb = zeros(samples_scenario,1); % forecast per bin
     ll_int = [0:w_int:1-w_int]; % lower limits for the bins
     ul_int = [0+w_int:w_int:1]; % upper limits for the bins
     n_int = 1/w_int; % number of bins
@@ -88,10 +88,10 @@ function [scen_lim,scen_red] = SCEN(n_scen_gen,MU,eps_init,coef_fit_var,norm_var
     % Correct for impossible scenarios
     for b = 1:n_scen_gen
         for a = 1:samples_scenario
-        if forecast(a)+scen_error(a,b) < 0
+        if forecast(a)+scen_error(a,b) < 0 % negative production
         scen_prob(b) = 0;
         end
-        if forecast(a)+scen_error(a,b) > 1
+        if forecast(a)+scen_error(a,b) > 1 % production higher than installed capacity
             scen_prob(b) = 0;
         end
         end
@@ -133,7 +133,12 @@ function [scen_lim,scen_red] = SCEN(n_scen_gen,MU,eps_init,coef_fit_var,norm_var
 
     [useless,ind_scen] = find(scen_prob>cut_off_prob,n_scen_gen_retain,'first');
     scen_error = scen_error(:,ind_scen);
-    scen_prob = scen_prob(ind_scen);%/sum(scen_prob(ind_scen));
+    
+    % equiprobability
+    n_scen_gen  = size(scen_error,2);
+    scen_prob = 1/n_scen_gen*ones(n_scen_gen,1)';
+    
+%     scen_prob = scen_prob(ind_scen);%/sum(scen_prob(ind_scen));
     n_scen_gen = length(scen_prob);
             
     %% Scenario reduction 

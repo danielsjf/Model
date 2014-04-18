@@ -112,8 +112,8 @@ Par.N = 6; N = Par.N; % number of units (CHP's, houses, etc.)
 % Input scenarios (s)
 %--------------------
 
-Par.S_gen = 70; % number of generated scenarios
-Par.S_red = 7; % number of reduced scenarios
+Par.S_gen = 100; % number of generated scenarios
+Par.S_red = 10; % number of reduced scenarios
 S = Par.S_red; % number of scenarios
 
 % Hash
