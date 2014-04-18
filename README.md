@@ -19,12 +19,12 @@ Assumptions
 
 Howto
 -----
-1) The model is a combination of Matlab code (.m) and GAMS using the Cplex solver (.gms). These programs and packages are required to run the model.
-2) Open the Matlab code: CHP.m
-3) Play around with the variables under DEFINING VARIABLES
-4) Run the script with Matlab
-5) The results, together with the input parameters are stored in results.mat (different runs with different parameters are added to results.mat so previous results are not thrown away)
-6) Stability.m shows a summary of all the results as dots on a graph
+1. The model is a combination of Matlab code (.m) and GAMS using the Cplex solver (.gms). These programs and packages are required to run the model.
+2. Open the Matlab code: CHP.m
+3. Play around with the variables under DEFINING VARIABLES
+4. Run the script with Matlab
+5. The results, together with the input parameters are stored in results.mat (different runs with different parameters are added to results.mat so previous results are not thrown away)
+6. Stability.m shows a summary of all the results as dots on a graph
 
 If you want to use any of the code, please send an email to jef(dot)daniels1(at)gmail(dot)com
 
