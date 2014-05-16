@@ -1,0 +1,16 @@
+Input="C:\Users\Jef\Dropbox\Thesis 2013\Model\Real\Model\CHP.gms"
+Output="C:\Users\Jef\Dropbox\Thesis 2013\Model\Real\Model\CHP.lst"
+Action=R
+SubSys=C:\GAMS\win64\24.2\gmscmpnt.txt
+ScrDir="C:\Users\Jef\Dropbox\Thesis 2013\Model\Real\Model\225a\"
+SysDir=C:\GAMS\win64\24.2\
+CurDir="C:\Users\Jef\Dropbox\Thesis 2013\Model\Real\Model\"
+WorkDir="C:\Users\Jef\Dropbox\Thesis 2013\Model\Real\Model\"
+PutDir="C:\Users\Jef\Dropbox\Thesis 2013\Model\Real\Model\"
+GridDir="C:\Users\Jef\Dropbox\Thesis 2013\Model\Real\Model\225a\"
+ScriptNext=225a\gamsnext.cmd
+ScriptFrst="@echo off"
+LogOption=0
+AppendOut=1
+LibIncDir=C:\GAMS\win64\24.2\inclib\
+SysIncDir=C:\GAMS\win64\24.2\

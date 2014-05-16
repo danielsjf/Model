@@ -3,6 +3,8 @@ function [scen_lim,scen_red] = SCEN(n_scen_gen,MU,eps_init,coef_fit_var,norm_var
     tic
     %% Scenario generation
     disp('    Scenario generation...')
+    
+    %n_scen_gen,MU,eps_init,coef_fit_var,norm_var,forecast,samples_scenario,cdf_stable,pdf_stable,pdf_stable_ee,w_int,w_ee,error_vec,n_scen_select,actual_realization,ff_mode
 
     % Generating histogram (without the function)
     forecast_pb = zeros(samples_scenario,1); % forecast per bin
@@ -81,7 +83,6 @@ function [scen_lim,scen_red] = SCEN(n_scen_gen,MU,eps_init,coef_fit_var,norm_var
        end   
     end
 
-
     % Probability of a scenario
     scen_prob = prod(scen_prob_mat);
     
@@ -97,16 +98,16 @@ function [scen_lim,scen_red] = SCEN(n_scen_gen,MU,eps_init,coef_fit_var,norm_var
         end
     end
     
-    % Eliminate the scenarios with a probability equal to zero
-    del = find(scen_prob == 0);
-    if isempty(del) == 0
-    if del(1) == 1
-        del(1) = [];
-    end
-    scen_prob(del) = [];
-    scen_error(:,del) = [];
-    n_scen_gen = length(scen_prob);
-    end
+%     % Eliminate the scenarios with a probability equal to zero
+%     del = find(scen_prob == 0);
+%     if isempty(del) == 0
+%     if del(1) == 1
+%         del(1) = [];
+%     end
+%     scen_prob(del) = [];
+%     scen_error(:,del) = [];
+%     n_scen_gen = length(scen_prob);
+%     end
     
 %     % normalization
 %     tot_prob = sum(scen_prob);

@@ -1,4 +1,4 @@
-function [i,n,s,P_g,P_c,P_i,P_n,P_st,E_i0,E_i1,Q_H,Nb,Ns,Ae,Aq,Pi_s,...
+function [i,n,s,P_g,P_c,P_i,P_n,P_st,E_i,E_is,Q_H,Nb,Ns,Ae,Aq,Pi_s,...
     Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,bid_single,CHP_bool,dt] = GAMSWRITE(sample_q,N,...
     S,price_elecS_s,price_elecC_s,price_imbal_s,price_gas_s,imbal_s,...
     heatD_s,Nb0,Ns0,Ae0,Aq0,Pi_st,Ecap_loVar,Ecap_upVar,Qcap_upVar,...
@@ -61,17 +61,17 @@ P_st.type = 'parameter';
 P_st.dim =1;
 
 
-E_i0.name='E_i0'; %electricity demand imbalance
-E_i0.val=imbal_s;
-E_i0.form = 'full';
-E_i0.type = 'parameter';
-E_i0.dim =2;
+E_i.name='E_i'; %electricity demand imbalance
+E_i.val=imbal_s;
+E_i.form = 'full';
+E_i.type = 'parameter';
+E_i.dim =2;
 
-E_i1.name='E_i1'; %electricity demand imbalance
-E_i1.val=sign(imbal_s);
-E_i1.form = 'full';
-E_i1.type = 'parameter';
-E_i1.dim =2;
+E_is.name='E_is'; %electricity demand imbalance
+E_is.val=sign(imbal_s);
+E_is.form = 'full';
+E_is.type = 'parameter';
+E_is.dim =2;
 
 Q_H.name='Q_H'; %heat demand house
 Q_H.val=heatD_s;

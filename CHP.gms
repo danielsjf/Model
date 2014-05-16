@@ -21,8 +21,8 @@ parameters
      P_n(i)       price natural gas
      P_st(n)      price startup
 
-     E_i0(i,s)    electricity demand imbalance
-     E_i1(i,s)    electricity demand imbalance sign
+     E_i(i,s)     electricity demand imbalance
+     E_is(i,s)    electricity demand imbalance sign
 
      Q_H(i,n)     heat demand house
 
@@ -51,7 +51,7 @@ Scalar
 
 
 $gdxin inputs
-$load i n s P_g P_c P_i P_n P_st E_i0 E_i1 Q_H Nb Ns Ae Aq Pi_s Ecap_lo Ecap_up Qcap_up Cs bid bid_bool bid_single CHP_bool dt
+$load i n s P_g P_c P_i P_n P_st E_i E_is Q_H Nb Ns Ae Aq Pi_s Ecap_lo Ecap_up Qcap_up Cs bid bid_bool bid_single CHP_bool dt
 $gdxin
 
 *$if exist matdata.gms  $include matdata.gms
@@ -76,29 +76,29 @@ variables
      FC_bc             Fuelcost boiler and chp
 
      E_CHP(i,n,s)      electricity supply CHP
-     E_i(i,s)          imbalance reduction
+     E_ir(i,s)          imbalance reduction
      E_b(i)            electricity demand bidding
 
      ON(i,n,s)         Turn CHP on
      BUY(n)            Invest in CHP;
 
-     E_i.lo(i,s) = min(0,-E_i0(i,s));
-     E_i.up(i,s) = max(-E_i0(i,s),0);
+     E_ir.lo(i,s) = min(0,-E_i(i,s));
+     E_ir.up(i,s) = max(-E_i(i,s),0);
 
      DeltaQ_S.lo(i,n,s) = -Qcap_up(n);
      DeltaQ_S.up(i,n,s) = Qcap_up(n);
 
 
 positive variables m_fCHP(i,n,s),m_fB(i,n,s),E_CHP(i,n,s),Q_CHP(i,n,s),Q_B(i,n,s),Q_S(i,n,s),E_b;
-     m_fCHP.up(i,n,s) = Ecap_up(n)/Ae(n);
-     m_fB.up(i,n,s) = Qcap_up(n)/Nb(n);
+*     m_fCHP.up(i,n,s) = Ecap_up(n)/Ae(n);
+*     m_fB.up(i,n,s) = Qcap_up(n)/Nb(n);
 
-     E_CHP.up(i,n,s) = Ecap_up(n);
+*     E_CHP.up(i,n,s) = Ecap_up(n);
 
-     Q_CHP.up(i,n,s) = Ecap_up(n)/Ae(n)*Aq(n);
+*     Q_CHP.up(i,n,s) = Ecap_up(n)/Ae(n)*Aq(n);
      Q_B.up(i,n,s)= Qcap_up(n);
 
-     E_b.up(i) = sum(n, Ecap_up(n));
+*     E_b.up(i) = sum(n, Ecap_up(n));
 *     Q_S.fx('192',n,s)= 0;
      Q_S.up(i,n,s)= Cs(n);
 
@@ -128,7 +128,7 @@ equation Investment,Revenue_bidding,Revenue_imbalance_red,Cost_extra_fuel,Fuelco
 
    Revenue_bidding(i)..        R_b(i) =e= E_b(i)*P_g(i);
 
-   Revenue_imbalance_red(i)..  R_ir(i) =e= sum(s, -Pi_s(s)*E_i1(i,s)*E_i(i,s)*P_i(i,s));
+   Revenue_imbalance_red(i)..  R_ir(i) =e= sum(s, -Pi_s(s)*E_is(i,s)*E_ir(i,s)*P_i(i,s));
 
    Cost_extra_fuel(i)..        C_ef(i) =e= FC_bc(i);
 *- FC_b;
@@ -139,7 +139,7 @@ equation Investment,Revenue_bidding,Revenue_imbalance_red,Cost_extra_fuel,Fuelco
 
    Heat_demand(i,n,s)..        Q_H(i,n) =e= DeltaQ_S(i,n,s) + Q_B(i,n,s) + Q_CHP(i,n,s);
 
-   Grid(i,s)..                 sum(n, E_CHP(i,n,s)) =e= E_i(i,s) + E_b(i);
+   Grid(i,s)..                 sum(n, E_CHP(i,n,s)) =e= E_ir(i,s) + E_b(i);
 
    Bidding(i)..                E_b(i)$(bid_single) =e= E_b(i--1)$(bid_single);
 
@@ -164,7 +164,7 @@ equation Investment,Revenue_bidding,Revenue_imbalance_red,Cost_extra_fuel,Fuelco
 option limrow=4, limcol=4;
 OPTION RESLIM = 200000000;
 
-*display DeltaQ_S, P_c, E_i, Cs
+*display DeltaQ_S, P_c, E_ir, Cs
 *model qp1 /cost, demand,storage,limit,chp_limit,Electrdem;
 model qp1 /all /;
 *qp1.Workspace = 30;
@@ -195,7 +195,7 @@ DeltaQ_S.l(i,n,s)$(not DeltaQ_S.l(i,n,s)) = eps;
 
 E_CHP.l(i,n,s)$(not E_CHP.l(i,n,s)) = eps;
 
-E_i.l(i,s)$(not E_i.l(i,s)) = eps;
+E_ir.l(i,s)$(not E_ir.l(i,s)) = eps;
 
 E_b.l(i)$(not E_b.l(i)) = eps;
 
@@ -229,4 +229,4 @@ $offtext
 *execute_unload %matout%;
 
 
-execute_unload 'results',  obj, R_b, R_ir, FC_bc, m_fCHP, m_fB, Q_CHP, Q_B, Q_S, DeltaQ_S, E_CHP, E_i, E_b, ON, BUY;
+execute_unload 'results',  obj, R_b, R_ir, FC_bc, m_fCHP, m_fB, Q_CHP, Q_B, Q_S, DeltaQ_S, E_CHP, E_ir, E_b, ON, BUY;

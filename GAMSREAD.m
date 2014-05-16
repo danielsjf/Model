@@ -1,4 +1,4 @@
-function [obj,R_b,R_ir,FC_bc,m_fCHP,m_fB,Q_CHP,Q_B,DeltaQ_S,Q_S,E_CHP,E_i,E_b,ON] = GAMSREAD(time_i,sample_q,N,S,sample_i)
+function [obj,R_b,R_ir,FC_bc,m_fCHP,m_fB,Q_CHP,Q_B,DeltaQ_S,Q_S,E_CHP,E_ir,E_b,ON] = GAMSREAD(time_i,sample_q,N,S,sample_i)
 % Objective
 rs.name = 'obj';
 r = rgdx ('results', rs);
@@ -90,11 +90,11 @@ for j=1:N
 end
 
 % Imbalance reduction
-rs.name = 'E_i';
+rs.name = 'E_ir';
 r = rgdx ('results', rs);
-E_i = zeros(sample_q,S);
+E_ir = zeros(sample_q,S);
 for j=1:S
-    E_i(time_i,j)=r.val((time_i-1)*S+j,3);
+    E_ir(time_i,j)=r.val((time_i-1)*S+j,3);
 end
 
 % Bidding price

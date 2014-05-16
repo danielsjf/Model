@@ -1,12 +1,15 @@
 clc
 close all
 
-load results.mat
+load Results_stability2days(2).mat
 
 Nr = size(resultsOld,2);
 
 Profit = zeros(Nr,1);
 Profit_opt = zeros(Nr,1);
+NCHP = zeros(Nr,1);
+R_b = zeros(Nr,1);
+R_ir = zeros(Nr,1);
 S_gen = zeros(Nr,1);
 S_red = zeros(Nr,1);
 N = zeros(Nr,1);
@@ -14,7 +17,10 @@ S = zeros(Nr,3);
 
 for k = 1:Nr
     Profit(k) = resultsOld(k).a.obj;
+    R_b(k) = sum(resultsOld(k).a_OPT.R_b);
+    R_ir(k) = sum(resultsOld(k).a_OPT.R_ir);
     Profit_opt(k) = resultsOld(k).a_OPT.obj;
+    NCHP(k) = resultsOld(k).a_NCHP.obj;
     S_gen(k) = resultsOld(k).Par.S_gen;
     S_red(k) = resultsOld(k).Par.S_red;
     N(k) = resultsOld(k).Par.N;
