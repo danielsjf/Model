@@ -1,3 +1,83 @@
 B 2 C o m p i l a t i o n
-B 283 Error Messages
-B 295 Include File Summary
+B 340 Include File Summary
+B 354 Equation Listing    SOLVE qp1 Using MIP From line 225
+D 355 Investment
+D 547 CyclePen
+D 552 Revenue_bidding
+D 565 Revenue_imbalance_red
+D 578 Cost_extra_fuel
+D 591 Fuelcost_only_boiler
+D 612 Fuelcost_boiler_chp
+D 657 Heat_demand
+D 674 Grid
+D 695 Bidding1
+D 700 Bidding2
+D 705 Storage
+D 726 CHP_E
+D 739 CHP_Q
+D 752 Boiler
+D 765 Shutdown1
+D 778 Shutdown2
+D 791 X1
+D 804 X2
+B 819 Column Listing      SOLVE qp1 Using MIP From line 225
+E 820 obj
+E 828 m_fCHP
+E 856 m_fB
+E 880 Q_CHP
+E 904 Q_B
+E 928 Q_S
+E 948 DeltaQ_S
+E 972 R_b
+E 996 R_ir
+E 1020 C_ef
+E 1044 FC_b
+E 1064 FC_bc
+E 1088 E_CHP
+E 1120 E_ir
+E 1144 E_b
+E 1168 ON
+E 1200 X
+E 1220 Y
+E 1240 Pen
+B 1250 Model Statistics    SOLVE qp1 Using MIP From line 225
+B 1266 Solution Report     SOLVE qp1 Using MIP From line 225
+F 1311 Investment
+F 1312 CyclePen
+F 1318 Revenue_bidding
+F 1515 Revenue_imbalance_red
+F 1712 Cost_extra_fuel
+F 1909 Fuelcost_only_boiler
+F 2106 Fuelcost_boiler_chp
+F 2303 Heat_demand
+F 3460 Grid
+F 3657 Bidding1
+F 3662 Bidding2
+F 3667 Storage
+F 4818 CHP_E
+F 5975 CHP_Q
+F 7132 Boiler
+F 8289 Shutdown1
+F 9446 Shutdown2
+F 10603 X1
+F 11760 X2
+G 12912 obj
+G 12918 m_fCHP
+G 14075 m_fB
+G 15232 Q_CHP
+G 16389 Q_B
+G 17546 Q_S
+G 18703 DeltaQ_S
+G 19860 R_b
+G 20057 R_ir
+G 20254 C_ef
+G 20451 FC_b
+G 20648 FC_bc
+G 20845 E_CHP
+G 22002 E_ir
+G 22199 E_b
+G 22396 ON
+G 23553 X
+G 24710 Y
+G 25867 Pen
+B 25880 E x e c u t i o n

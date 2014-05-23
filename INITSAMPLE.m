@@ -9,8 +9,8 @@ spot = Par.spot;
 imbalance = Par.imbalance;         
 profiles = Par.profiles;           
 windturbine = Par.windturbine;     
-Ae0 = Par.Ae0;                     
-Aq0 = Par.Aq0;                     
+AE0 = Par.AE0;                     
+AQ0 = Par.AQ0;                     
 Nb0 = Par.Nb0;                     
 Ns0 = Par.Ns0;                     
 E_bSingle = Par.E_bSingle;         
@@ -47,8 +47,7 @@ tempPOS = Year.tempPOS;
 tempNEG = Year.tempNEG;                         
 price_posActual_y = Year.price_posActual_y;     
 price_negActual_y = Year.price_negActual_y;     
-Pi_actual = Year.Pi_actual;                     
-CHPBool = Year.CHPBool;                         
+Pi_actual = Year.Pi_actual;                                        
 gasPrice = Year.gasPrice;                       
 price_gas_y = Year.price_gas_y;                 
 price_elecC_y = Year.price_elecC_y;             
@@ -76,7 +75,7 @@ sample_i = [1:sample_q] + period_q; % sample period index
 
 total_q=period_q+(sample_q-1); % [quarters] period before and during sample period
 
-sample_ii = Dnom*quarters+1:sample_q-24*quarters;
+sample_ii = (24-Dnom)*quarters+1:sample_q-24*quarters;
 
 % Units (n)
 %----------
@@ -141,7 +140,6 @@ Sample.price_elecC_s = price_elecC_s;
 Sample.price_elecS_s = price_elecS_s;            
 Sample.elecD_s = elecD_s;                        
 Sample.elecWF_s = elecWF_s;                      
-Sample.elecWP_s = elecWP_s;                      
-Sample.erW_s = erW_s;                            
+Sample.elecWP_s = elecWP_s;                                                
 Sample.heatD_s = heatD_s; 
 end

@@ -4,10 +4,11 @@ function [Gen, Year] = INITYEAR(Par)
 %Input variables
 %-----------------------------------
 
-Ae0 = Par.Ae0;                     
-Aq0 = Par.Aq0;                     
+AE0 = Par.AE0;                     
+AQ0 = Par.AQ0;                     
 Nb0 = Par.Nb0;                     
-Ns0 = Par.Ns0;                     
+Ns0 = Par.Ns0;
+MinCap = Par.MinCap;
 E_bSingle = Par.E_bSingle;         
 Yearstart = Par.Yearstart;         
 week = Par.week;                   
@@ -22,6 +23,7 @@ load Imbalance2013 % imbalance prices
 load Profiles2012 % heat and electricity demand of different houses, hotels and offices
 %load Scenarios % different stochastic scenarios for wind imbalance
 load WindTurbine2012 % Normalised wind turbine data (forecast and production)
+load CHPsets
 
 disp('Initialising variables...')
 
@@ -103,13 +105,11 @@ price_negActual_y = NEG; % [€/MWh] imbalance electricity price during the year
 
 Pi_actual = 1; % The probability of the actual scenario
 
-CHPBool = 1; % Take the CHP into account (1 is yes, 0 is no)
-
 % Price
 %------
 
 % Gas
-gasPrice = 0.035*1000; % [€/MWh] gas price (http://epp.eurostat.ec.europa.eu/statistics_explained/index.php/Electricity_and_natural_gas_price_statistics;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_204&lang=en;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_205&lang=en;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_202&lang=en;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_203&lang=en)
+gasPrice = 0.040*1000; % [€/MWh] gas price (http://epp.eurostat.ec.europa.eu/statistics_explained/index.php/Electricity_and_natural_gas_price_statistics;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_204&lang=en;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_205&lang=en;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_202&lang=en;http://appsso.eurostat.ec.europa.eu/nui/show.do?dataset=nrg_pc_203&lang=en)
 price_gas_y = gasPrice*ones(days_y*hours*quarters,1); % [€/MWh] gas price during the year
 
 % Consumption
@@ -162,8 +162,10 @@ heatD_y = heatD_y(:,1:N);
 
 tank_cap = 2*max(heatD_y,[],1); % [MWh] Storage tank capacity
 
-Ecap_upVar = 1/quarters*thermalload_opt/Par.Aq0*Par.Ae0;
-Ecap_loVar = 0.5*Ecap_upVar;
+CHPData = Set{Par.CHPset};
+
+Ecap_upVar = 1/quarters*[CHPData(3).EC, CHPData(1).EC, CHPData(2).EC, CHPData(1).EC, CHPData(1).EC, CHPData(2).EC]/1000;
+Ecap_loVar = MinCap*Ecap_upVar;
 Qcap_upVar = max(heatD_y,[],1)';
 
 %% Gen
@@ -193,8 +195,7 @@ Year.tempPOS = tempPOS;
 Year.tempNEG = tempNEG;                        
 Year.price_posActual_y = price_posActual_y;    
 Year.price_negActual_y = price_negActual_y;    
-Year.Pi_actual = Pi_actual;                    
-Year.CHPBool = CHPBool;                        
+Year.Pi_actual = Pi_actual;                                           
 Year.gasPrice = gasPrice;                      
 Year.price_gas_y = price_gas_y;                
 Year.price_elecC_y = price_elecC_y;            

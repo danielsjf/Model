@@ -22,9 +22,9 @@ cogen = [
     1, 2, 1, 2.5, 0.263, 0.657; % Vaillant EcoPower 1.0
     1, 2, 2, 5.5, 0.25, 0.69; % Proenvis
     1, 2, 1.9, 9, 0.19, 0.76; % Kirsch nano
-    1, 2, 5.5, 13.5, 0.27, 0.67; % Viessmann
+    1, 2, 5.5, 13.5, 0.27, 0.67; % Viessmann Vitobloc 200 EM-5
     1, 2, 6, 13.5, 0.265, 0.595; % Aisin Seiki
-    1, 2, 5.5, 15.5, 0.269, 0.611; % Baxi Dachs Senertec
+    1, 2, 5.5, 12.5, 0.269, 0.611; % Baxi Dachs Senertec
     1, 1, 5.5, 15.5, 0.269, 0.758; % Baxi Dachs Senertec (with condensor)
     1, 2, 3.0, 8.0, 0.25, 0.665; % Vaillant EcoPower 3.0
     1, 2, 4.7, 12.5, 0.25, 0.665; % Vaillant EcoPower 4.7

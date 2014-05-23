@@ -1,8 +1,8 @@
-function [i,n,s,P_g,P_c,P_i,P_n,P_st,E_i,E_is,Q_H,Nb,Ns,Ae,Aq,Pi_s,...
-    Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,bid_single,CHP_bool,dt] = GAMSWRITE(sample_q,N,...
+function [i,n,s,P_g,P_c,P_i,P_n,P_st,E_i,E_is,Q_H,Nb,Ns,Ae0,Aq0,Ae1,Aq1,Pi_s,...
+    Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,bid_single,CHP_bool,QSs,ON0,UpPen,DoPen,Dur,dt] = GAMSWRITE(sample_q,N,...
     S,price_elecS_s,price_elecC_s,price_imbal_s,price_gas_s,imbal_s,...
-    heatD_s,Nb0,Ns0,Ae0,Aq0,Pi_st,Ecap_loVar,Ecap_upVar,Qcap_upVar,...
-    tank_cap,E_b,E_bBool,E_bSingle,CHPBool,quarters)
+    heatD_s,Nb0,Ns0,AE0,AQ0,AE1,AQ1,Pi_st,Ecap_loVar,Ecap_upVar,Qcap_upVar,...
+    tank_cap,E_b,E_bBool,E_bSingle,CHPBool,Q_Ss,on0,UpPenal,DoPenal,quarters)
 %Input sets
 %----------
 
@@ -92,17 +92,29 @@ Ns.form = 'full';
 Ns.type = 'parameter';
 Ns.dim =1;
 
-Ae.name='Ae'; %electrical efficiency CHP
-Ae.val=Ae0*ones(N,1);
-Ae.form = 'full';
-Ae.type = 'parameter';
-Ae.dim =1;
+Ae0.name='Ae'; %electrical efficiency CHP
+Ae0.val=AE0';
+Ae0.form = 'full';
+Ae0.type = 'parameter';
+Ae0.dim =1;
 
-Aq.name='Aq'; %thermal efficiency CHP
-Aq.val=Aq0*ones(N,1);
-Aq.form = 'full';
-Aq.type = 'parameter';
-Aq.dim =1;
+Aq0.name='Aq'; %thermal efficiency CHP
+Aq0.val=AQ0';
+Aq0.form = 'full';
+Aq0.type = 'parameter';
+Aq0.dim =1;
+
+Ae1.name='Ae1'; %electrical efficiency CHP
+Ae1.val=AE1';
+Ae1.form = 'full';
+Ae1.type = 'parameter';
+Ae1.dim =1;
+
+Aq1.name='Aq1'; %thermal efficiency CHP
+Aq1.val=AQ1';
+Aq1.form = 'full';
+Aq1.type = 'parameter';
+Aq1.dim =1;
 
 Pi_s.name='Pi_s'; %probability scenario
 Pi_s.val=Pi_st;
@@ -154,6 +166,38 @@ CHP_bool.name='CHP_bool'; % Take the CHP into account in the optimalisation (1 i
 CHP_bool.val=CHPBool;
 CHP_bool.type = 'parameter';
 CHP_bool.dim=0;
+
+QSs.name='Q_Ss'; % tank value in the beginning
+QSs.val=Q_Ss;
+QSs.form = 'full';
+QSs.type = 'parameter';
+QSs.dim =1;
+
+MinUp.name='MinUp'; % tank value in the beginning
+MinUp.val=4;
+MinUp.type = 'parameter';
+MinUp.dim =0;
+
+ON0.name='ON0'; % ON value in the beginning
+ON0.val=on0;
+ON0.form = 'full';
+ON0.type = 'parameter';
+ON0.dim =1;
+
+UpPen.name='UpPen'; % up value in the beginning
+UpPen.val=UpPenal;
+UpPen.type = 'parameter';
+UpPen.dim =0;
+
+DoPen.name='DoPen'; % dowm value in the beginning
+DoPen.val=DoPenal;
+DoPen.type = 'parameter';
+DoPen.dim =0;
+
+Dur.name='Dur'; % dowm value in the beginning
+Dur.val=100;
+Dur.type = 'parameter';
+Dur.dim =0;
 
 dt.name='dt'; %delta t for the storage time period analyzed 0.25for 15 min
 dt.val=1/quarters;

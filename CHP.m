@@ -69,6 +69,7 @@ load Imbalance2013 % imbalance prices
 load Profiles2012 % heat and electricity demand of different houses, hotels and offices
 %load Scenarios % different stochastic scenarios for wind imbalance
 load WindTurbine2012 % Normalised wind turbine data (forecast and production)
+load CHPsets % CHP data
 
 Par.spot = DataHash(spot); % Hash of the spotprice data to check whether the data has been changed
 Par.imbalance = DataHash([MDP, MIP, NEG, NRV, POS, SI, alpha]); % Hash of the imbalance data to check whether the data has been changed
@@ -86,10 +87,16 @@ disp('Defining variables...')
 % Input constants
 %----------------
 
-Ae0 = 0.4; % CHP electrical efficiency
-Aq0 = 0.45; % CHP thermal efficiency
+CHPset = 3; % 1 = ICE; 2 = SOFC; 3 = PEM
+CHPData = Set{CHPset};
+
+AE0 = [CHPData(3).EE, CHPData(1).EE, CHPData(2).EE, CHPData(1).EE, CHPData(1).EE, CHPData(2).EE]/100; % CHP electrical efficiency
+AQ0 = [CHPData(3).TE, CHPData(1).TE, CHPData(2).TE, CHPData(1).TE, CHPData(1).TE, CHPData(2).TE]/100; % CHP thermal efficiency
+AE1 = [0 0 0 0 0 0]; % CHP electrical efficiency constant
+AQ1 = [0 0 0 0 0 0]; % CHP thermal efficiency constant
 Nb0 = 0.98; % Boiler thermal efficiency
 Ns0 = 0.998; % Storage heat efficiency
+MinCap = 0.3;
 
 Cu_sh = 2; % shown chp
 S_sh = 3; % shown scenario
@@ -102,7 +109,7 @@ E_bSingle = 0; % 1 is single bid for the whole period, 0 is one bid per quarter
 %---------------
 
 Yearstart = 2; % First day of 2013 was a Tuesday
-week = [3, 16, 28]; % week of the year
+week = [2, 15, 28]; % week of the year
 sample_d = 7; % [days] sample duration (every time a full week)
 Dnom = 12; % [hours] hour of the nomination deadline
 
@@ -114,17 +121,21 @@ N = 6; % number of units (CHP's, houses, etc.)
 % Input scenarios (s)
 %--------------------
 
-S_gen = 5; % number of generated scenarios
-S_red = 2; % number of reduced scenarios
+S_gen = 100; % number of generated scenarios
+S_red = 10; % number of reduced scenarios
 S = S_red; % number of scenarios
 
 % Convert
 %--------
 
-Par.Ae0 = Ae0;                    
-Par.Aq0 = Aq0;                    
+Par.CHPset = CHPset;
+Par.AE0 = AE0;                    
+Par.AQ0 = AQ0;   
+Par.AE1 = AE1;                    
+Par.AQ1 = AQ1;
 Par.Nb0 = Nb0;                    
-Par.Ns0 = Ns0;                    
+Par.Ns0 = Ns0;
+Par.MinCap = MinCap;
 Par.E_bSingle = E_bSingle;        
 Par.Yearstart = Yearstart;        
 Par.week = week;                  
@@ -183,6 +194,10 @@ Ecap_upVar = Gen.Ecap_upVar;
 Ecap_loVar = Gen.Ecap_loVar;     
 Qcap_upVar = Gen.Qcap_upVar; 
 
+Par2 = Par;
+Par2.Dnom = 24;
+[Gen2, ~] = INITYEAR(Par2);
+
 thermalload = Year.thermalload;                 
 duration_opt = Year.duration_opt;               
 thermalload_opt = Year.thermalload_opt;         
@@ -192,8 +207,7 @@ tempPOS = Year.tempPOS;
 tempNEG = Year.tempNEG;                         
 price_posActual_y = Year.price_posActual_y;     
 price_negActual_y = Year.price_negActual_y;     
-Pi_actual = Year.Pi_actual;                     
-CHPBool = Year.CHPBool;                         
+Pi_actual = Year.Pi_actual;                                            
 gasPrice = Year.gasPrice;                       
 price_gas_y = Year.price_gas_y;                 
 price_elecC_y = Year.price_elecC_y;             
@@ -204,26 +218,45 @@ elecWP_y = Year.elecWP_y;
 erW_y = Year.erW_y;                             
 heatD_y = Year.heatD_y; 
 
-aT.R_b = [];
-aT.R_ir = [];
-aT.FC_bc = [];
-aT.m_fCHP = [];
-aT.m_fB = [];
-aT.Q_CHP = [];
-aT.Q_B = [];
-aT.DeltaQ_S = [];
-aT.Q_S = [];
-aT.E_CHP = [];
-aT.E_ir = [];
-aT.E_b = [];
-aT.ON = [];
+SampleDAT = [];
+SampleDAT = INITSTRUCT(SampleDAT,'Sample');
+
+SampleDATT = [];
+SampleDATT = INITSTRUCT(SampleDATT,'Sample');
+
+SampleAT = [];
+SampleAT = INITSTRUCT(SampleAT,'Sample');
+
+SampleATT = [];
+SampleATT = INITSTRUCT(SampleATT,'Sample');
+
+aT = [];
+aT = INITSTRUCT(aT,'CHPdata');
+
+aTT = [];
+aTT = INITSTRUCT(aTT,'CHPdata');
+
+daT = [];
+daT = INITSTRUCT(daT,'CHPdata');
+
+daTT = [];
+daTT = INITSTRUCT(daTT,'CHPdata');
 
 for xi = 1:numel(week) % sample week of the year
+    Q_Ss = zeros(N,1);
+    on0 = zeros(N,1);
+    UpPenal = 1; DoPenal = 10;
+    if xi == 1; UpPenal = 1; DoPenal = 10; end
     for xj = 1:sample_d+1 % day of the sample week
 %-----------------------------------
 %INITIALISING VARIABLES 
 %Input variables
 %-----------------------------------
+
+disp(['Day ', num2str(xj), ' of week ', num2str(xi)])
+
+if xj ~= 1; Q_Ss = Q_SsDnom; end
+if xj ~= 1; on0 = on0Dnom; end
 
 [Sample] = INITSAMPLE(Par,Gen,Year,xi,xj);
 
@@ -240,9 +273,24 @@ price_elecC_s = Sample.price_elecC_s;
 price_elecS_s = Sample.price_elecS_s;             
 elecD_s = Sample.elecD_s;                         
 elecWF_s = Sample.elecWF_s;                       
-elecWP_s = Sample.elecWP_s;                       
-erW_s = Sample.erW_s;                             
+elecWP_s = Sample.elecWP_s;                                                  
 heatD_s = Sample.heatD_s;
+
+quarters = Gen.quarters;         
+hours = Gen.hours;               
+days_w = Gen.days_w;             
+days_y = Gen.days_y;             
+timestep = Gen.timestep;         
+sample_h = Gen.sample_h;         
+sample_q = Gen.sample_q;         
+time_i = Gen.time_i;             
+time_q = Gen.time_q;             
+tank_cap = Gen.tank_cap;         
+Ecap_upVar = Gen.Ecap_upVar;     
+Ecap_loVar = Gen.Ecap_loVar;     
+Qcap_upVar = Gen.Qcap_upVar;
+
+S = S_red;
 
 %-----------------------------------
 %GENERATE FORECAST SCENARIOS
@@ -268,7 +316,7 @@ ff_mode = 'Old'; % scenario reduction mode (Old or Advanced)
 if Calc == 1
     [scen_lim,scen_red] = SCEN(Par.S_gen,MU,eps_init,coef_fit_var,norm_var,elecWF_s,...
         sample_q,cdf_stable,pdf_stable,pdf_stable_ee,w_int,w_ee,error_vec,...
-        Par.S_red-1,erW_s,ff_mode);
+        Par.S_red-1,actuals_s,ff_mode);
 else
     Scen = resultsOld(nR).Scen;
     scen_lim = Scen.lim;
@@ -369,11 +417,41 @@ disp('  * Imbalance prices')
 
 disp('Preparing for day-ahead optimisation...')
 
-[i,n,s,P_g,P_c,P_i,P_n,P_st,E_i,E_is,Q_H,Nb,Ns,Ae,Aq,Pi_s,...
-    Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,bid_single,CHP_bool,dt] = GAMSWRITE(sample_q,N,...
+SampleDAT.sample_i = [SampleDAT.sample_i, sample_i(sample_ii)];
+SampleDAT.imbal_s = [SampleDAT.imbal_s; imbal_s(sample_ii,:)];
+SampleDAT.Pi_st = [SampleDAT.Pi_st; Pi_st'];
+SampleDAT.actuals_s = [SampleDAT.actuals_s; actuals_s(sample_ii)];
+SampleDAT.price_actual_s = [SampleDAT.price_actual_s; price_actual_s(sample_ii)];
+SampleDAT.price_posActual_s = [SampleDAT.price_posActual_s; price_posActual_s(sample_ii)];
+SampleDAT.price_negActual_s = [SampleDAT.price_negActual_s; price_negActual_s(sample_ii)];
+SampleDAT.price_gas_s = [SampleDAT.price_gas_s; price_gas_s(sample_ii)];
+SampleDAT.price_elecC_s = [SampleDAT.price_elecC_s; price_elecC_s(sample_ii)];
+SampleDAT.price_elecS_s = [SampleDAT.price_elecS_s; price_elecS_s(sample_ii)];
+SampleDAT.elecD_s = [SampleDAT.elecD_s; elecD_s(sample_ii,:)];
+SampleDAT.elecWF_s = [SampleDAT.elecWF_s; elecWF_s(sample_ii)];
+SampleDAT.elecWP_s = [SampleDAT.elecWP_s; elecWP_s(sample_ii)];
+SampleDAT.heatD_s = [SampleDAT.heatD_s; heatD_s(sample_ii,:)];
+
+SampleDATT.sample_i = [SampleDATT.sample_i, sample_i];
+SampleDATT.imbal_s = [SampleDATT.imbal_s; imbal_s];
+SampleDATT.Pi_st = [SampleDATT.Pi_st; Pi_st'];
+SampleDATT.actuals_s = [SampleDATT.actuals_s; actuals_s];
+SampleDATT.price_actual_s = [SampleDATT.price_actual_s; price_actual_s];
+SampleDATT.price_posActual_s = [SampleDATT.price_posActual_s; price_posActual_s];
+SampleDATT.price_negActual_s = [SampleDATT.price_negActual_s; price_negActual_s];
+SampleDATT.price_gas_s = [SampleDATT.price_gas_s; price_gas_s];
+SampleDATT.price_elecC_s = [SampleDATT.price_elecC_s; price_elecC_s];
+SampleDATT.price_elecS_s = [SampleDATT.price_elecS_s; price_elecS_s];
+SampleDATT.elecD_s = [SampleDATT.elecD_s; elecD_s];
+SampleDATT.elecWF_s = [SampleDATT.elecWF_s; elecWF_s];
+SampleDATT.elecWP_s = [SampleDATT.elecWP_s; elecWP_s];
+SampleDATT.heatD_s = [SampleDATT.heatD_s; heatD_s]; 
+
+[i,n,s,P_g,P_c,P_i,P_n,P_st,E_i,E_is,Q_H,Nb,Ns,Ae0,Aq0,Ae1,Aq1,Pi_s,...
+    Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,bid_single,CHP_bool,QSs,ON0,UpPen,DoPen,Dur,dt] = GAMSWRITE(sample_q,N,...
     S,price_elecS_s,price_elecC_s,price_imbal_s,price_gas_s,imbal_s,...
-    heatD_s,Par.Nb0,Par.Ns0,Par.Ae0,Par.Aq0,Pi_st,Ecap_loVar,Ecap_upVar,Qcap_upVar,...
-    tank_cap,zeros(sample_q,1),0,Par.E_bSingle,CHPBool,quarters);
+    heatD_s,Nb0,Ns0,AE0,AQ0,AE1,AQ1,Pi_st,Ecap_loVar,Ecap_upVar,Qcap_upVar,...
+    tank_cap,zeros(sample_q,1),0,E_bSingle,1,Q_Ss,on0,UpPenal,DoPenal,quarters);
 
 %% CALL GAMS 
 %-----------------------------------
@@ -389,43 +467,6 @@ disp('Optimising day-ahead...')
 o2 = 0;
 down = 1;
 
-% while true
-%     BUYst.val=[ones(1,Cust) zeros(1,Cu-Cust)];
-%     wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i,E_is,Q_H,Nb,Ns,Ae,Aq,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,dt,BUYst);
-%     path(path,'C:\GAMS\win64\24.2')
-%     gams('CHP');%LOCAL PRICE IS TAKEN INTO ACCOUNT 
-%     
-%     rs.name = 'obj';
-%     r = rgdx ('results', rs);
-%     obj=r.val(:,1);
-%     o1 = obj/Cust;
-%     [obj Cust o1]
-%     
-%     o1
-%     break;
-%     
-%     if o1 >= o2
-%         o2 = o1;
-%         if down == 1
-%             Cust = Cust - 1;
-%             if Cust == 0; break; end;
-%         else
-%             Cust = Cust + 1;
-%             if Cust > Cu; break; end;
-%         end
-%     else
-%         if down == 1
-%             Cust = Cust + 2;
-%             if Cust > Cu; break; end;
-%             down = 0;
-%         else
-%             break;
-%         end
-%     end
-% end
-
-% Custopt = Cust;
-
 % Calculate investment costs 
 %---------------------------
 
@@ -436,13 +477,6 @@ down = 1;
 
 Cust = N; % Custopt;
 
-BUYst.val=[ones(1,Cust) zeros(1,N-Cust)];
-    wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i,E_is,Q_H,Nb,Ns,Ae,Aq,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,bid_single,CHP_bool,dt);
-
-if Calc == 1
-    gams('CHP'); % Day-ahead optimisation
-end
-
 %% RESULTS 
 %-----------------------------------
 %LOADING RESULTS
@@ -452,8 +486,32 @@ end
 disp('Loading results day-ahead optimisation...')
 
 if Calc == 1
+    wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i,E_is,Q_H,Nb,Ns,Ae0,Aq0,Ae1,Aq1,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,bid_single,CHP_bool,QSs,ON0,UpPen,DoPen,Dur,dt);
+    gams('CHP'); % Day-ahead optimisation
     da.name = 'day-ahead optimisation';
     [da.obj,da.R_b,da.R_ir,da.FC_bc,da.m_fCHP,da.m_fB,da.Q_CHP,da.Q_B,da.DeltaQ_S,da.Q_S,da.E_CHP,da.E_ir,da.E_b,da.ON] = GAMSREAD(time_i,sample_q,N,S,sample_i);
+    try
+        TEST(Sample, da, 0, 1)
+    catch
+        disp('Relax optimisation constraints (on/off penalty; on0)')
+        UpPen.val = 0;
+        DoPen.val = 0;
+        ON0.val = zeros(size(ON0.val));
+        wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i,E_is,Q_H,Nb,Ns,Ae0,Aq0,Ae1,Aq1,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,bid_single,CHP_bool,QSs,ON0,UpPen,DoPen,Dur,dt);
+        gams('CHP'); % Day-ahead optimisation
+        da.name = 'day-ahead optimisation';
+        [da.obj,da.R_b,da.R_ir,da.FC_bc,da.m_fCHP,da.m_fB,da.Q_CHP,da.Q_B,da.DeltaQ_S,da.Q_S,da.E_CHP,da.E_ir,da.E_b,da.ON] = GAMSREAD(time_i,sample_q,N,S,sample_i);
+        try
+            TEST(Sample, da, 0, 1)
+        catch
+            disp('Increase duration')
+            Dur.val = 500;
+            wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i,E_is,Q_H,Nb,Ns,Ae0,Aq0,Ae1,Aq1,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,bid_single,CHP_bool,QSs,ON0,UpPen,DoPen,Dur,dt);
+            gams('CHP'); % Day-ahead optimisation
+            da.name = 'day-ahead optimisation';
+            [da.obj,da.R_b,da.R_ir,da.FC_bc,da.m_fCHP,da.m_fB,da.Q_CHP,da.Q_B,da.DeltaQ_S,da.Q_S,da.E_CHP,da.E_ir,da.E_b,da.ON] = GAMSREAD(time_i,sample_q,N,S,sample_i);
+        end
+    end
 else
     da = resultsOld(nR).da;
 end
@@ -464,6 +522,36 @@ end
 %-----------------------------------
 
 disp('Postprocessing results day-ahead optimisation...')
+
+daT.name = 'actuals (multiple weeks)';
+daT.R_b = [daT.R_b; da.R_b(sample_ii)];
+daT.R_ir = [daT.R_ir; da.R_ir(sample_ii)];
+daT.FC_bc = [daT.FC_bc; da.FC_bc(sample_ii)];
+daT.m_fCHP = [daT.m_fCHP; da.m_fCHP(sample_ii,:,:)];
+daT.m_fB = [daT.m_fB; da.m_fB(sample_ii,:,:)];
+daT.Q_CHP = [daT.Q_CHP; da.Q_CHP(sample_ii,:,:)];
+daT.Q_B = [daT.Q_B; da.Q_B(sample_ii,:,:)];
+daT.DeltaQ_S = [daT.DeltaQ_S; da.DeltaQ_S(sample_ii,:,:)];
+daT.Q_S = [daT.Q_S; da.Q_S(sample_ii,:,:)];
+daT.E_CHP = [daT.E_CHP; da.E_CHP(sample_ii,:,:)];
+daT.E_ir = [daT.E_ir; da.E_ir(sample_ii,:)];
+daT.E_b = [daT.E_b; da.E_b(sample_ii)];
+daT.ON = [daT.ON; da.ON(sample_ii,:,:)];
+
+daTT.name = 'actuals (complete simulation)';
+daTT.R_b = [daTT.R_b; da.R_b];
+daTT.R_ir = [daTT.R_ir; da.R_ir];
+daTT.FC_bc = [daTT.FC_bc; da.FC_bc];
+daTT.m_fCHP = [daTT.m_fCHP; da.m_fCHP];
+daTT.m_fB = [daTT.m_fB; da.m_fB];
+daTT.Q_CHP = [daTT.Q_CHP; da.Q_CHP];
+daTT.Q_B = [daTT.Q_B; da.Q_B];
+daTT.DeltaQ_S = [daTT.DeltaQ_S; da.DeltaQ_S];
+daTT.Q_S = [daTT.Q_S; da.Q_S];
+daTT.E_CHP = [daTT.E_CHP; da.E_CHP];
+daTT.E_ir = [daTT.E_ir; da.E_ir];
+daTT.E_b = [daTT.E_b; da.E_b];
+daTT.ON = [daTT.ON; da.ON];
 
 %R_b = E_b.*P_g.val;
 %R_i = abs(E_ir*Pi_st).*P_i.val;
@@ -479,6 +567,41 @@ profit_t = sum(profit,1); % [€] total profit
 %-----------------------------------
 
 disp('Calculating actuals...')
+
+[Sample] = INITSAMPLE(Par2,Gen2,Year,xi,xj);
+
+sample_i = Sample.sample_i;    
+sample_ii = Sample.sample_ii;   
+sample_pe = Sample.sample_pe;                     
+total_q = Sample.total_q;                         
+actuals_s = Sample.actuals_s;                     
+price_actual_s = Sample.price_actual_s;           
+price_posActual_s = Sample.price_posActual_s;     
+price_negActual_s = Sample.price_negActual_s;     
+price_gas_s = Sample.price_gas_s;                 
+price_elecC_s = Sample.price_elecC_s;             
+price_elecS_s = Sample.price_elecS_s;             
+elecD_s = Sample.elecD_s;                         
+elecWF_s = Sample.elecWF_s;                       
+elecWP_s = Sample.elecWP_s;                                                  
+heatD_s = Sample.heatD_s;
+
+quarters = Gen2.quarters;         
+hours = Gen2.hours;               
+days_w = Gen2.days_w;             
+days_y = Gen2.days_y;             
+timestep = Gen2.timestep;         
+sample_h = Gen2.sample_h;         
+sample_q = Gen2.sample_q;         
+time_i = Gen2.time_i;             
+time_q = Gen2.time_q;             
+tank_cap = Gen2.tank_cap;         
+Ecap_upVar = Gen2.Ecap_upVar;     
+Ecap_loVar = Gen2.Ecap_loVar;     
+Qcap_upVar = Gen2.Qcap_upVar;
+
+if xj ~= 1; Q_Ss = Q_SsDay; end
+if xj ~= 1; on0 = on0Day; end
 
 % Input actuals
 %--------------
@@ -497,14 +620,14 @@ s.uels{1,1} = 1:S;
 %-----------------
 
 % Actuals (with CHP; optimal)
-[i,n,s,P_g,P_c,P_i,P_n,P_st,E_i,E_is,Q_H,Nb,Ns,Ae,Aq,Pi_s,...
-    Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,bid_single,CHP_bool,dt] = GAMSWRITE(sample_q,N,...
+[i,n,s,P_g,P_c,P_i,P_n,P_st,E_i,E_is,Q_H,Nb,Ns,Ae0,Aq0,Ae1,Aq1,Pi_s,...
+    Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,bid_single,CHP_bool,QSs,ON0,UpPen,DoPen,Dur,dt] = GAMSWRITE(sample_q,N,...
     S,price_elecS_s,price_elecC_s,price_actual_s,price_gas_s,actuals_s,...
-    heatD_s,Par.Nb0,Par.Ns0,Par.Ae0,Par.Aq0,Pi_actual,Ecap_loVar,Ecap_upVar,Qcap_upVar,...
-    tank_cap,zeros(sample_q,1),0,Par.E_bSingle,CHPBool,quarters);
+    heatD_s,Par.Nb0,Par.Ns0,AE0,AQ0,AE1,AQ1,Pi_actual,Ecap_loVar,Ecap_upVar,Qcap_upVar,...
+    tank_cap,zeros(sample_q,1),0,Par.E_bSingle,1,Q_Ss,on0,UpPenal,DoPenal,quarters);
 
 BUYst.val=[ones(1,Cust) zeros(1,N-Cust)];
-    wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i,E_is,Q_H,Nb,Ns,Ae,Aq,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,bid_single,CHP_bool,dt);
+    wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i,E_is,Q_H,Nb,Ns,Ae0,Aq0,Ae1,Aq1,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,bid_single,CHP_bool,QSs,ON0,UpPen,DoPen,Dur,dt);
 
 if Calc == 1
     gams('CHP'); % Calculate actuals
@@ -518,36 +641,45 @@ else
 end
 
 % Actuals (with CHP; day-ahead bidding)
-[i,n,s,P_g,P_c,P_i,P_n,P_st,E_i,E_is,Q_H,Nb,Ns,Ae,Aq,Pi_s,...
-    Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,bid_single,CHP_bool,dt] = GAMSWRITE(sample_q,N,...
+[i,n,s,P_g,P_c,P_i,P_n,P_st,E_i,E_is,Q_H,Nb,Ns,Ae0,Aq0,Ae1,Aq1,Pi_s,...
+    Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,bid_single,CHP_bool,QSs,ON0,UpPen,DoPen,Dur,dt] = GAMSWRITE(sample_q,N,...
     S,price_elecS_s,price_elecC_s,price_actual_s,price_gas_s,actuals_s,...
-    heatD_s,Par.Nb0,Par.Ns0,Par.Ae0,Par.Aq0,Pi_actual,Ecap_loVar,Ecap_upVar,Qcap_upVar,...
-    tank_cap,da.E_b,1,Par.E_bSingle,CHPBool,quarters);
-
-BUYst.val=[ones(1,Cust) zeros(1,N-Cust)];
-    wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i,E_is,Q_H,Nb,Ns,Ae,Aq,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,bid_single,CHP_bool,dt);
+    heatD_s,Par.Nb0,Par.Ns0,AE0,AQ0,AE1,AQ1,Pi_actual,Ecap_loVar,Ecap_upVar,Qcap_upVar,...
+    tank_cap,da.E_b((24-Dnom)*quarters+1:end),1,Par.E_bSingle,1,Q_Ss,on0,UpPenal,DoPenal,quarters);
+    
 
 if Calc == 1
+    wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i,E_is,Q_H,Nb,Ns,Ae0,Aq0,Ae1,Aq1,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,bid_single,CHP_bool,QSs,ON0,UpPen,DoPen,Dur,dt);
     gams('CHP'); % Calculate actuals
-end    
-
-if Calc == 1
     a.name = 'actuals (with CHP; day-ahead bidding)';
     [a.obj,a.R_b,a.R_ir,a.FC_bc,a.m_fCHP,a.m_fB,a.Q_CHP,a.Q_B,a.DeltaQ_S,a.Q_S,a.E_CHP,a.E_ir,a.E_b,a.ON] = GAMSREAD(time_i,sample_q,N,S,sample_i);
+    try
+        TEST(Sample, a, 0, 1)
+    catch
+        disp('Relax optimisation constraints (on/off penalty; on0)')
+        UpPen.val = 0;
+        DoPen.val = 0;
+        ON0.val = zeros(size(ON0.val));
+        wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i,E_is,Q_H,Nb,Ns,Ae0,Aq0,Ae1,Aq1,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,bid_single,CHP_bool,QSs,ON0,UpPen,DoPen,Dur,dt);
+        gams('CHP'); % Calculate actuals
+        a.name = 'actuals (with CHP; day-ahead bidding)';
+        [a.obj,a.R_b,a.R_ir,a.FC_bc,a.m_fCHP,a.m_fB,a.Q_CHP,a.Q_B,a.DeltaQ_S,a.Q_S,a.E_CHP,a.E_ir,a.E_b,a.ON] = GAMSREAD(time_i,sample_q,N,S,sample_i);
+        TEST(Sample, a, 0, 1)
+    end
 else
     a = resultsOld(nR).a;
 end
 
 % Actuals (without CHP; day-ahead bidding/optimal)
 CHPBool = 0;
-[i,n,s,P_g,P_c,P_i,P_n,P_st,E_i,E_is,Q_H,Nb,Ns,Ae,Aq,Pi_s,...
-    Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,bid_single,CHP_bool,dt] = GAMSWRITE(sample_q,N,...
+[i,n,s,P_g,P_c,P_i,P_n,P_st,E_i,E_is,Q_H,Nb,Ns,Ae0,Aq0,Ae1,Aq1,Pi_s,...
+    Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,bid_single,CHP_bool,QSs,ON0,UpPen,DoPen,Dur,dt] = GAMSWRITE(sample_q,N,...
     S,price_elecS_s,price_elecC_s,price_actual_s,price_gas_s,actuals_s,...
-    heatD_s,Par.Nb0,Par.Ns0,Par.Ae0,Par.Aq0,Pi_actual,Ecap_loVar,Ecap_upVar,Qcap_upVar,...
-    tank_cap,zeros(sample_q,1),0,CHPBool,Par.E_bSingle,quarters);
+    heatD_s,Par.Nb0,Par.Ns0,AE0,AQ0,AE1,AQ1,Pi_actual,Ecap_loVar,Ecap_upVar,Qcap_upVar,...
+    tank_cap,zeros(sample_q,1),0,Par.E_bSingle,1,Q_Ss,on0,UpPenal,DoPenal,quarters);
 
 BUYst.val=[ones(1,Cust) zeros(1,N-Cust)];
-    wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i,E_is,Q_H,Nb,Ns,Ae,Aq,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,bid_single,CHP_bool,dt);
+    wgdx('inputs', i,n,s,P_g,P_c,P_i,P_n,P_st,E_i,E_is,Q_H,Nb,Ns,Ae0,Aq0,Ae1,Aq1,Pi_s,Ecap_lo,Ecap_up,Qcap_up,Cs,bid,bid_bool,bid_single,CHP_bool,QSs,ON0,UpPen,DoPen,Dur,dt);
 
 if Calc == 1
     gams('CHP'); % Calculate actuals
@@ -565,6 +697,37 @@ end
 %Sum up
 %-----------------------------------
 
+SampleAT.sample_i = [SampleAT.sample_i, sample_i(sample_ii)];
+SampleAT.imbal_s = [SampleAT.imbal_s; imbal_s(sample_ii,:)];
+SampleAT.Pi_st = [SampleAT.Pi_st; Pi_st'];
+SampleAT.actuals_s = [SampleAT.actuals_s; actuals_s(sample_ii)];
+SampleAT.price_actual_s = [SampleAT.price_actual_s; price_actual_s(sample_ii)];
+SampleAT.price_posActual_s = [SampleAT.price_posActual_s; price_posActual_s(sample_ii)];
+SampleAT.price_negActual_s = [SampleAT.price_negActual_s; price_negActual_s(sample_ii)];
+SampleAT.price_gas_s = [SampleAT.price_gas_s; price_gas_s(sample_ii)];
+SampleAT.price_elecC_s = [SampleAT.price_elecC_s; price_elecC_s(sample_ii)];
+SampleAT.price_elecS_s = [SampleAT.price_elecS_s; price_elecS_s(sample_ii)];
+SampleAT.elecD_s = [SampleAT.elecD_s; elecD_s(sample_ii,:)];
+SampleAT.elecWF_s = [SampleAT.elecWF_s; elecWF_s(sample_ii)];
+SampleAT.elecWP_s = [SampleAT.elecWP_s; elecWP_s(sample_ii)];
+SampleAT.heatD_s = [SampleAT.heatD_s; heatD_s(sample_ii,:)];
+
+SampleATT.sample_i = [SampleATT.sample_i, sample_i];
+SampleATT.imbal_s = [SampleATT.imbal_s; imbal_s];
+SampleATT.Pi_st = [SampleATT.Pi_st; Pi_st'];
+SampleATT.actuals_s = [SampleATT.actuals_s; actuals_s];
+SampleATT.price_actual_s = [SampleATT.price_actual_s; price_actual_s];
+SampleATT.price_posActual_s = [SampleATT.price_posActual_s; price_posActual_s];
+SampleATT.price_negActual_s = [SampleATT.price_negActual_s; price_negActual_s];
+SampleATT.price_gas_s = [SampleATT.price_gas_s; price_gas_s];
+SampleATT.price_elecC_s = [SampleATT.price_elecC_s; price_elecC_s];
+SampleATT.price_elecS_s = [SampleATT.price_elecS_s; price_elecS_s];
+SampleATT.elecD_s = [SampleATT.elecD_s; elecD_s];
+SampleATT.elecWF_s = [SampleATT.elecWF_s; elecWF_s];
+SampleATT.elecWP_s = [SampleATT.elecWP_s; elecWP_s];
+SampleATT.heatD_s = [SampleATT.heatD_s; heatD_s];  
+
+aT.name = 'actuals (multiple weeks)';
 aT.R_b = [aT.R_b; a.R_b(sample_ii)];
 aT.R_ir = [aT.R_ir; a.R_ir(sample_ii)];
 aT.FC_bc = [aT.FC_bc; a.FC_bc(sample_ii)];
@@ -578,6 +741,21 @@ aT.E_CHP = [aT.E_CHP; a.E_CHP(sample_ii,:)];
 aT.E_ir = [aT.E_ir; a.E_ir(sample_ii)];
 aT.E_b = [aT.E_b; a.E_b(sample_ii)];
 aT.ON = [aT.ON; a.ON(sample_ii,:)];
+
+aTT.name = 'actuals (complete simulation)';
+aTT.R_b = [aTT.R_b; a.R_b];
+aTT.R_ir = [aTT.R_ir; a.R_ir];
+aTT.FC_bc = [aTT.FC_bc; a.FC_bc];
+aTT.m_fCHP = [aTT.m_fCHP; a.m_fCHP];
+aTT.m_fB = [aTT.m_fB; a.m_fB];
+aTT.Q_CHP = [aTT.Q_CHP; a.Q_CHP];
+aTT.Q_B = [aTT.Q_B; a.Q_B];
+aTT.DeltaQ_S = [aTT.DeltaQ_S; a.DeltaQ_S];
+aTT.Q_S = [aTT.Q_S; a.Q_S];
+aTT.E_CHP = [aTT.E_CHP; a.E_CHP];
+aTT.E_ir = [aTT.E_ir; a.E_ir];
+aTT.E_b = [aTT.E_b; a.E_b];
+aTT.ON = [aTT.ON; a.ON];
 
 %-----------------------------------
 %COMPARE WITH ACTUALS
@@ -594,6 +772,14 @@ disp('Comparing actuals with day-ahead optimisation...')
 
 % Actuals (without CHP; day-ahead bidding/optimal)
 %[a_NCHP.GEN, a_NCHP.CHP_data] = STATSSCEN(a_NCHP,1,1);
+
+Q_SsDnom = a.Q_S(Par.Dnom*4,:);
+Q_SsDay = a.Q_S(24*4,:);
+
+on0Dnom = a.ON(Par.Dnom*4,:);
+on0Day = a.ON(24*4,:);
+
+disp(' ')
 
     end
 end

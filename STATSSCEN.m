@@ -1,9 +1,15 @@
-function [GEN, CHP] = STATSSCEN(RES,S,dib)
-if nargin < 2
+function [GEN, CHP] = STATSSCEN(RES,PAR,S,dib,Period)
+if nargin < 3
   S = 1;
 end
-if nargin < 3
+if nargin < 4
   dib = 0;
+end
+if nargin < 2
+  error('Not enough arguments');
+end
+if nargin < 5
+  Period = 1:size(RES.E_CHP,1);
 end
 if S > size(RES.E_CHP,3)
     S = 1;
@@ -19,14 +25,14 @@ if dib == 1, disp('  '); end
 %--------
 
 N = size(RES.E_CHP,2); % number of units
-time_l = size(RES.E_CHP,1); % length of the timeperiod
+time_l = size(RES.E_CHP(Period,:),1); % length of the timeperiod
 
 % Profit
 %-------
-GEN.profit = RES.R_b + RES.R_ir - RES.FC_bc; % [€] profit at every moment in time
-GEN.profit_t = sum(GEN.profit,1); % [€] total profit
+GEN.costWchp = RES.R_b(Period) + RES.R_ir(Period) - RES.FC_bc(Period); % [€] cost at every moment in time
+GEN.costWchpT = sum(GEN.costWchp,1); % [€] total cost
 
-if dib == 1, disp(['Total profit: ',num2str(GEN.profit_t)]); end
+if dib == 1, disp(['Cost with CHP: ',num2str(GEN.costWchpT)]); end
 if dib == 1, disp('  '); end
 
 % CHP
@@ -35,7 +41,7 @@ if dib == 1, disp('  '); end
 % (all units)
 
 % Binairy matrix (-1 is off, 1 is on)
-CHPbin = RES.E_CHP(:,:,S);
+CHPbin = RES.E_CHP(Period,:,S);
 CHPbin(CHPbin>0) = 1;
 CHPbin(CHPbin==0) = -1;
 
@@ -75,9 +81,11 @@ if dib == 1, disp('  '); end
 
 % Uptime/downtime
 CHP.uptimes = zeros(time_l,N);
+CHP.uptimesL = zeros(1,N);
 CHP.uptimesM = zeros(1,N);
 CHP.uptimesA = zeros(1,N);
 CHP.downtimes = zeros(time_l,N);
+CHP.downtimesL = zeros(1,N);
 CHP.downtimesM = zeros(1,N);
 CHP.downtimesA = zeros(1,N);
 for k = 1:N
@@ -104,24 +112,59 @@ for k = 1:N
     else
         i = floor(numel(temp2)/2);
         CHP.uptimes(1:floor(numel(temp2)/2)+(CHPbin(1,k)==1&&numel(temp2)/2~=i),k) = temp2(1+(CHPbin(1,k)==-1):2:numel(temp2))/4; % [hours] Distances between local extrema (uptime)
+        CHP.uptimesL(k) = min(CHP.uptimes(CHP.uptimes(:,k)>0,k)); % [hours] Smallest distance between local extrema (uptime)
         CHP.uptimesM(k) = max(CHP.uptimes(:,k)); % [hours] Largest distance between local extrema (uptime)
         CHP.uptimesA(k) = mean(CHP.uptimes(CHP.uptimes(:,k)>0)); % [hours] Average distance between local extrema (uptime)
         CHP.downtimes(1:floor(numel(temp2)/2)+(CHPbin(1,k)==-1&&numel(temp2)/2~=i),k) = temp2(1+(CHPbin(1,k)==1):2:numel(temp2))/4; % [hours] Distances between local extrema (downtime)
+        CHP.downtimesL(k) = min(CHP.downtimes(CHP.downtimes(:,k)>0,k)); % [hours] Smallest distance between local extrema (downtime)
         CHP.downtimesM(k) = max(CHP.downtimes(:,k)); % [hours] Largest distance between local extrema (downtime)
         CHP.downtimesA(k) = mean(CHP.downtimes(CHP.downtimes(:,k)>0)); % [hours] Average distance between local extrema (downtime)
     end
 end
 
+CHP.uptimeL = [find(CHP.uptimesL==min(CHP.uptimesL)),CHP.uptimesL(CHP.uptimesL==min(CHP.uptimesL))]; % [unit, hours] CHP with the shortest uptime: unit number and duration
+CHP.uptimeL = [CHP.uptimeL(1),CHP.uptimeL(end)];
 CHP.uptimeM = [find(CHP.uptimesM==max(CHP.uptimesM)),CHP.uptimesM(CHP.uptimesM==max(CHP.uptimesM))]; % [unit, hours] CHP with the longest uptime: unit number and duration
 CHP.uptimeM = [CHP.uptimeM(1),CHP.uptimeM(end)];
 CHP.uptimeA = sum(CHP.uptimesA)/N; % [hours] Average CHP uptime
+CHP.downtimeL = [find(CHP.downtimesL==min(CHP.downtimesL)),CHP.downtimesL(CHP.downtimesL==min(CHP.downtimesL))]; % [unit, hours] CHP with the longest downtime: unit number and duration
+CHP.downtimeL = [CHP.downtimeL(1),CHP.downtimeL(end)];
 CHP.downtimeM = [find(CHP.downtimesM==max(CHP.downtimesM)),CHP.downtimesM(CHP.downtimesM==max(CHP.downtimesM))]; % [unit, hours] CHP with the longest downtime: unit number and duration
 CHP.downtimeM = [CHP.downtimeM(1),CHP.downtimeM(end)];
 CHP.downtimeA = sum(CHP.downtimesA)/N; % [hours] Average CHP downtime
+if dib == 1, disp(['The CHP with the shortest uptime is unit ',num2str(CHP.uptimeL(1)),' which is up for ',num2str(CHP.uptimeL(2)),' hours.']); end
 if dib == 1, disp(['The CHP with the longest uptime is unit ',num2str(CHP.uptimeM(1)),' which is up for ',num2str(CHP.uptimeM(2)),' hours.']); end
+if dib == 1, disp(['The CHP with the shortest downtime is unit ',num2str(CHP.downtimeL(1)),' which is down for ',num2str(CHP.downtimeL(2)),' hours.']); end
 if dib == 1, disp(['The CHP with the longest downtime is unit ',num2str(CHP.downtimeM(1)),' which is down for ',num2str(CHP.downtimeM(2)),' hours.']); end
 if dib == 1, disp(['The average CHP uptime is ',num2str(CHP.uptimeA),' hours and the average CHP downtime is ',num2str(CHP.downtimeA),' hours.']); end
 if dib == 1, disp('  '); end
+
+% Efficiencies
+
+FuelEffCHP = sum(sum(RES.Q_CHP(Period,:) + RES.E_CHP(Period,:),2))/sum(sum(RES.m_fCHP,2));
+FuelEffB = sum(sum(RES.Q_B(Period,:),2))/sum(sum(RES.m_fB(Period,:),2));
+
+StorageLosses = sum(RES.Q_S(Period(1),:)) - sum(sum(RES.DeltaQ_S(Period,:),2)) - sum(RES.Q_S(Period(end),:)); % Storage losses
+TotalProduction = sum(sum(RES.Q_CHP(Period,:) + RES.E_CHP(Period,:) + RES.Q_B(Period,:),2)); % Total energy production
+FuelEffWOL = (TotalProduction - StorageLosses)/sum(sum(RES.m_fCHP(Period,:) + RES.m_fB(Period,:),2)); % Total fuel efficiency without storage losses
+FuelEffWL = TotalProduction/sum(sum(RES.m_fCHP(Period,:) + RES.m_fB(Period,:),2)); % Total fuel efficiency with storage losses
+if dib == 1, disp(['The fuel utilisation ratio of the CHP is ',num2str(FuelEffCHP*100,4),'%']); end
+if dib == 1, disp(['The fuel utilisation ratio of the Boiler is ',num2str(FuelEffB*100,4),'%']); end
+if dib == 1, disp(['The total fuel utilisation ratio without storage losses is ',num2str(FuelEffWOL*100,4),'%']); end
+if dib == 1, disp(['The storage losses are ',num2str(StorageLosses*1000,4),' [kWh] on a total production of ',num2str(TotalProduction,4),' [MWh] (heat and electricity)']); end
+if dib == 1, disp(['The total fuel utilisation ratio with storage losses is ',num2str(FuelEffWL*100,4),'%']); end
+
+if dib == 1, disp('  '); end
+
+HeatFact = 1 - (15+273)/(70+273);
+ExEffCHP = sum((PAR.AE0+PAR.AQ0*HeatFact).*sum(RES.m_fCHP(Period,:),1),2)/sum(sum(RES.m_fCHP(Period,:),2));
+ExEffB = sum((PAR.Nb0*HeatFact).*sum(RES.m_fB(Period,:),1),2)/sum(sum(RES.m_fB(Period,:),2));
+
+ExEffWOL = (TotalProduction - StorageLosses)/sum(sum(RES.m_fCHP(Period,:) + RES.m_fB(Period,:),2)); % Total fuel efficiency without storage losses
+ExEffWL = (ExEffCHP*sum(sum(RES.m_fCHP(Period,:),2)) + ExEffB*sum(sum(RES.m_fB(Period,:)),2)) / sum(sum(RES.m_fCHP(Period,:) + RES.m_fB(Period,:),2)); % Total fuel efficiency with storage losses
+if dib == 1, disp(['The exergetic efficiency of the CHP is ',num2str(ExEffCHP*100,4),'%']); end
+if dib == 1, disp(['The exergetic efficiency of the Boiler is ',num2str(ExEffB*100,4),'%']); end
+if dib == 1, disp(['The total exergetic efficiency is ',num2str(ExEffWL*100,4),'%']); end
 
 % Boiler
 %-------
